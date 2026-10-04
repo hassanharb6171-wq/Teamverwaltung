@@ -19,7 +19,9 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers
     ],
-    partials: [Partials.GuildMember]
+    partials: [
+        Partials.GuildMember
+    ]
 });
 
 const DATA_DIR = path.join(__dirname, "data");
@@ -27,15 +29,23 @@ const WARN_FILE = path.join(DATA_DIR, "teamwarns.json");
 const TEAMLIST_FILE = path.join(DATA_DIR, "teamliste.json");
 
 if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.mkdirSync(DATA_DIR, {
+        recursive: true
+    });
 }
 
 if (!fs.existsSync(WARN_FILE)) {
-    fs.writeFileSync(WARN_FILE, "{}");
+    fs.writeFileSync(
+        WARN_FILE,
+        "{}"
+    );
 }
 
 if (!fs.existsSync(TEAMLIST_FILE)) {
-    fs.writeFileSync(TEAMLIST_FILE, "{}");
+    fs.writeFileSync(
+        TEAMLIST_FILE,
+        "{}"
+    );
 }
 
 /* =========================================================
@@ -44,7 +54,12 @@ if (!fs.existsSync(TEAMLIST_FILE)) {
 
 function loadWarns() {
     try {
-        return JSON.parse(fs.readFileSync(WARN_FILE, "utf8"));
+        return JSON.parse(
+            fs.readFileSync(
+                WARN_FILE,
+                "utf8"
+            )
+        );
     } catch {
         return {};
     }
@@ -53,13 +68,22 @@ function loadWarns() {
 function saveWarns(data) {
     fs.writeFileSync(
         WARN_FILE,
-        JSON.stringify(data, null, 2)
+        JSON.stringify(
+            data,
+            null,
+            2
+        )
     );
 }
 
 function loadTeamliste() {
     try {
-        return JSON.parse(fs.readFileSync(TEAMLIST_FILE, "utf8"));
+        return JSON.parse(
+            fs.readFileSync(
+                TEAMLIST_FILE,
+                "utf8"
+            )
+        );
     } catch {
         return {};
     }
@@ -68,7 +92,11 @@ function loadTeamliste() {
 function saveTeamliste(data) {
     fs.writeFileSync(
         TEAMLIST_FILE,
-        JSON.stringify(data, null, 2)
+        JSON.stringify(
+            data,
+            null,
+            2
+        )
     );
 }
 
@@ -77,13 +105,17 @@ function saveTeamliste(data) {
 ========================================================= */
 
 function getRankIndex(member) {
-    return config.TEAM_RANKS.findIndex(rank =>
-        member.roles.cache.has(rank.id)
+    return config.TEAM_RANKS.findIndex(
+        rank =>
+            member.roles.cache.has(
+                rank.id
+            )
     );
 }
 
 function getRank(member) {
-    const index = getRankIndex(member);
+    const index =
+        getRankIndex(member);
 
     if (index === -1) {
         return null;
@@ -108,8 +140,14 @@ function isDiscordInhaber(member) {
     );
 }
 
-function canManageTarget(executor, target) {
-    if (executor.id === target.id) {
+function canManageTarget(
+    executor,
+    target
+) {
+    if (
+        executor.id ===
+        target.id
+    ) {
         return {
             allowed: false,
             reason:
@@ -117,16 +155,29 @@ function canManageTarget(executor, target) {
         };
     }
 
-    if (isDiscordInhaber(executor)) {
+    if (
+        isDiscordInhaber(
+            executor
+        )
+    ) {
         return {
             allowed: true
         };
     }
 
-    const executorIndex = getRankIndex(executor);
-    const targetIndex = getRankIndex(target);
+    const executorIndex =
+        getRankIndex(
+            executor
+        );
 
-    if (targetIndex === -1) {
+    const targetIndex =
+        getRankIndex(
+            target
+        );
+
+    if (
+        targetIndex === -1
+    ) {
         return {
             allowed: true
         };
@@ -157,7 +208,10 @@ function getNametagFromRole(role) {
         return null;
     }
 
-    const match = role.name.match(/^\[([^\]]+)\]/);
+    const match =
+        role.name.match(
+            /^\[([^\]]+)\]/
+        );
 
     if (match) {
         return `[${match[1]}]`;
@@ -167,21 +221,27 @@ function getNametagFromRole(role) {
 }
 
 function getNametagRole(member) {
-    const excluded = new Set(
-        config.NO_NAMETAG_ROLES || []
-    );
+    const excluded =
+        new Set(
+            config.NO_NAMETAG_ROLES || []
+        );
 
     /*
         PARTNER
     */
 
-    const partnerRole = member.guild.roles.cache.find(
-        role => role.name.toLowerCase() === "partner"
-    );
+    const partnerRole =
+        member.guild.roles.cache.find(
+            role =>
+                role.name.toLowerCase() ===
+                "partner"
+        );
 
     if (
         partnerRole &&
-        member.roles.cache.has(partnerRole.id)
+        member.roles.cache.has(
+            partnerRole.id
+        )
     ) {
         return partnerRole;
     }
@@ -190,12 +250,21 @@ function getNametagRole(member) {
         HÖCHSTER TEAMRANG
     */
 
-    for (const rank of config.TEAM_RANKS) {
+    for (
+        const rank of
+        config.TEAM_RANKS
+    ) {
         if (
-            member.roles.cache.has(rank.id) &&
-            !excluded.has(rank.id)
+            member.roles.cache.has(
+                rank.id
+            ) &&
+            !excluded.has(
+                rank.id
+            )
         ) {
-            return member.guild.roles.cache.get(rank.id);
+            return member.guild.roles.cache.get(
+                rank.id
+            );
         }
     }
 
@@ -204,8 +273,12 @@ function getNametagRole(member) {
     */
 
     if (
-        member.roles.cache.has(config.BÜRGER) &&
-        !excluded.has(config.BÜRGER)
+        member.roles.cache.has(
+            config.BÜRGER
+        ) &&
+        !excluded.has(
+            config.BÜRGER
+        )
     ) {
         return member.guild.roles.cache.get(
             config.BÜRGER
@@ -217,7 +290,10 @@ function getNametagRole(member) {
 
 async function updateNametag(member) {
     try {
-        if (!member || member.user.bot) {
+        if (
+            !member ||
+            member.user.bot
+        ) {
             return;
         }
 
@@ -225,25 +301,43 @@ async function updateNametag(member) {
             return;
         }
 
-        const role = getNametagRole(member);
+        const role =
+            getNametagRole(
+                member
+            );
 
         let nickname;
 
         if (!role) {
-            nickname = member.user.username;
+            nickname =
+                member.user.username;
         } else {
-            const tag = getNametagFromRole(role);
+            const tag =
+                getNametagFromRole(
+                    role
+                );
 
             nickname =
                 `${tag} ✘ ${member.user.username}`;
         }
 
-        if (nickname.length > 32) {
-            nickname = nickname.substring(0, 32);
+        if (
+            nickname.length > 32
+        ) {
+            nickname =
+                nickname.substring(
+                    0,
+                    32
+                );
         }
 
-        if (member.nickname !== nickname) {
-            await member.setNickname(nickname);
+        if (
+            member.nickname !==
+            nickname
+        ) {
+            await member.setNickname(
+                nickname
+            );
         }
     } catch (error) {
         console.error(
@@ -254,87 +348,186 @@ async function updateNametag(member) {
 }
 
 /* =========================================================
-   KUMULATIVE EBENEN
+   EBENEN
 ========================================================= */
 
-function getRequiredAuxiliaryRoles(rankIndex) {
+/*
+    WICHTIG:
+
+    Diese Funktion gibt NICHT mehr einfach
+    alle Ebenen für höhere Ränge zurück.
+
+    Die drei Bereiche sind FEST:
+
+    ADMIN EBENE:
+    Test admin -> Head of administration
+
+    MODERATOR EBENE:
+    Test moderator -> Head of moderation
+
+    SUPPORTER EBENE:
+    Test Supporter -> Head of support
+*/
+
+function getRequiredAuxiliaryRoles(
+    rankIndex
+) {
     const roles = [];
 
     /*
+        =========================================
+        PROJEKTSPITZE
         Co.Owner und höher
+        =========================================
     */
 
-    if (rankIndex <= 3) {
+    if (
+        rankIndex >= 0 &&
+        rankIndex <= 3
+    ) {
         roles.push(
             config.AUXILIARY_ROLES.PROJEKTSPITZE
         );
     }
 
     /*
+        =========================================
+        TEAMVERWALTUNG
         Teamleitung und höher
+        =========================================
     */
 
-    if (rankIndex <= 10) {
+    if (
+        rankIndex >= 0 &&
+        rankIndex <= 10
+    ) {
         roles.push(
             config.AUXILIARY_ROLES.TEAMVERWALTUNG
         );
     }
 
     /*
+        =========================================
+        LEITUNGSEBENE
         Supportleitung und höher
+        =========================================
     */
 
-    if (rankIndex <= 15) {
+    if (
+        rankIndex >= 0 &&
+        rankIndex <= 15
+    ) {
         roles.push(
             config.AUXILIARY_ROLES.LEITUNGSEBENE
         );
     }
 
     /*
+        =========================================
+        HIGHTEAM
         Fraktions verwaltung und höher
+        =========================================
     */
 
-    if (rankIndex <= 21) {
+    if (
+        rankIndex >= 0 &&
+        rankIndex <= 21
+    ) {
         roles.push(
             config.AUXILIARY_ROLES.HIGHTEAM
         );
     }
 
     /*
+        =========================================
+        INGAME RECHTE
         Sr.Admin und höher
+        =========================================
     */
 
-    if (rankIndex <= 23) {
+    if (
+        rankIndex >= 0 &&
+        rankIndex <= 23
+    ) {
         roles.push(
             config.AUXILIARY_ROLES.INGAME_RECHTE
         );
     }
 
     /*
-        Test admin und höher
+        =========================================
+        ADMIN EBENE
+        NUR:
+
+        Head of administration
+        Sr.Admin
+        Admin
+        Jr.Admin
+        Test admin
+
+        Also Index 22 bis 26.
+
+        NICHT:
+        Founder
+        Developer
+        Owner
+        Teamleitung
+        Fraktions verwaltung
+        usw.
+        =========================================
     */
 
-    if (rankIndex <= 26) {
+    if (
+        rankIndex >= 22 &&
+        rankIndex <= 26
+    ) {
         roles.push(
             config.AUXILIARY_ROLES.ADMIN_EBENE
         );
     }
 
     /*
-        Test moderator und höher
+        =========================================
+        MODERATOR EBENE
+        NUR:
+
+        Head of moderation
+        Sr. Moderator
+        Moderator
+        Jr.Moderator
+        Test moderator
+
+        Also Index 27 bis 31.
+        =========================================
     */
 
-    if (rankIndex <= 31) {
+    if (
+        rankIndex >= 27 &&
+        rankIndex <= 31
+    ) {
         roles.push(
             config.AUXILIARY_ROLES.MODERATOR_EBENE
         );
     }
 
     /*
-        Test Supporter und höher
+        =========================================
+        SUPPORTER EBENE
+        NUR:
+
+        Head of support
+        Supporter
+        Jr. Supporter
+        Test Supporter
+
+        Also Index 32 bis 35.
+        =========================================
     */
 
-    if (rankIndex <= 35) {
+    if (
+        rankIndex >= 32 &&
+        rankIndex <= 35
+    ) {
         roles.push(
             config.AUXILIARY_ROLES.SUPPORTER_EBENE
         );
@@ -343,46 +536,42 @@ function getRequiredAuxiliaryRoles(rankIndex) {
     return roles;
 }
 
-function getAuxiliaryNames(guild, roleIds) {
-    const names = [];
-
-    for (const roleId of roleIds) {
-        const role = guild.roles.cache.get(roleId);
-
-        if (role) {
-            names.push(role.name);
-        }
-    }
-
-    return names;
-}
-
 /*
-    Entfernt wirklich ALLE Nebenrollen.
+    Alle Nebenrollen entfernen.
 
-    Wird nur bei BESTANDEN benutzt,
-    weil dort ein kompletter Reset gewünscht ist.
+    NUR für BESTANDEN verwenden.
 */
 
-async function removeAuxiliaryRoles(member) {
-    const roleIds = Object.values(
-        config.AUXILIARY_ROLES
-    );
+async function removeAuxiliaryRoles(
+    member
+) {
+    const roleIds =
+        Object.values(
+            config.AUXILIARY_ROLES
+        );
 
-    const removable = roleIds.filter(roleId =>
-        member.roles.cache.has(roleId)
-    );
+    const removable =
+        roleIds.filter(
+            roleId =>
+                member.roles.cache.has(
+                    roleId
+                )
+        );
 
-    if (removable.length > 0) {
-        await member.roles.remove(removable);
+    if (
+        removable.length > 0
+    ) {
+        await member.roles.remove(
+            removable
+        );
     }
 }
 
 /*
-    Fügt alle benötigten Ebenen hinzu.
+    Benötigte Ebenen hinzufügen.
 
-    Wichtig:
-    Vorhandene Ebenen werden NICHT entfernt.
+    Bestehende Ebenen werden NICHT
+    automatisch entfernt.
 */
 
 async function addRequiredAuxiliaryRoles(
@@ -390,11 +579,22 @@ async function addRequiredAuxiliaryRoles(
     rankIndex
 ) {
     const requiredRoles =
-        getRequiredAuxiliaryRoles(rankIndex);
+        getRequiredAuxiliaryRoles(
+            rankIndex
+        );
 
-    for (const roleId of requiredRoles) {
-        if (!member.roles.cache.has(roleId)) {
-            await member.roles.add(roleId);
+    for (
+        const roleId of
+        requiredRoles
+    ) {
+        if (
+            !member.roles.cache.has(
+                roleId
+            )
+        ) {
+            await member.roles.add(
+                roleId
+            );
         }
     }
 
@@ -402,12 +602,13 @@ async function addRequiredAuxiliaryRoles(
 }
 
 /*
-    Beim DOWNRANK:
+    DOWNRANK
 
-    - Ebenen, die noch benötigt werden -> behalten
-    - Ebenen, die nicht mehr benötigt werden -> entfernen
-    - Server Team -> niemals entfernen
-    - fremde Rollen -> niemals anfassen
+    Hier werden nur Ebenen entfernt,
+    die für den neuen Rang nicht mehr
+    erlaubt sind.
+
+    Server Team wird NIEMALS entfernt.
 */
 
 async function updateAuxiliaryRolesAfterDownrank(
@@ -415,12 +616,23 @@ async function updateAuxiliaryRolesAfterDownrank(
     rankIndex
 ) {
     const requiredRoles =
-        getRequiredAuxiliaryRoles(rankIndex);
+        getRequiredAuxiliaryRoles(
+            rankIndex
+        );
 
     const auxiliaryRoles =
-        Object.values(config.AUXILIARY_ROLES);
+        Object.values(
+            config.AUXILIARY_ROLES
+        );
 
-    for (const roleId of auxiliaryRoles) {
+    for (
+        const roleId of
+        auxiliaryRoles
+    ) {
+        /*
+            SERVER TEAM IMMER BEHALTEN
+        */
+
         if (
             roleId ===
             config.AUXILIARY_ROLES.SERVER_TEAM
@@ -428,21 +640,70 @@ async function updateAuxiliaryRolesAfterDownrank(
             continue;
         }
 
+        /*
+            Nur Nebenrollen anfassen,
+            die nicht mehr benötigt werden.
+        */
+
         if (
-            member.roles.cache.has(roleId) &&
-            !requiredRoles.includes(roleId)
+            member.roles.cache.has(
+                roleId
+            ) &&
+            !requiredRoles.includes(
+                roleId
+            )
         ) {
-            await member.roles.remove(roleId);
+            await member.roles.remove(
+                roleId
+            );
         }
     }
 
-    for (const roleId of requiredRoles) {
-        if (!member.roles.cache.has(roleId)) {
-            await member.roles.add(roleId);
+    /*
+        Benötigte Rollen hinzufügen
+    */
+
+    for (
+        const roleId of
+        requiredRoles
+    ) {
+        if (
+            !member.roles.cache.has(
+                roleId
+            )
+        ) {
+            await member.roles.add(
+                roleId
+            );
         }
     }
 
     return requiredRoles;
+}
+
+function getAuxiliaryNames(
+    guild,
+    roleIds
+) {
+    const names = [];
+
+    for (
+        const roleId of
+        roleIds
+    ) {
+        const role =
+            guild.roles.cache.get(
+                roleId
+            );
+
+        if (role) {
+            names.push(
+                role.name
+            );
+        }
+    }
+
+    return names;
 }
 
 /* =========================================================
@@ -471,16 +732,25 @@ const KEEP_ON_TEAMKICK = [
     "1556241220265574400"
 ];
 
-async function performTeamkick(member) {
+async function performTeamkick(
+    member
+) {
     const rolesToRemove =
         member.roles.cache
-            .filter(role =>
-                !KEEP_ON_TEAMKICK.includes(role.id) &&
-                role.editable
+            .filter(
+                role =>
+                    !KEEP_ON_TEAMKICK.includes(
+                        role.id
+                    ) &&
+                    role.editable
             )
-            .map(role => role.id);
+            .map(
+                role => role.id
+            );
 
-    if (rolesToRemove.length > 0) {
+    if (
+        rolesToRemove.length > 0
+    ) {
         await member.roles.remove(
             rolesToRemove
         );
@@ -496,14 +766,24 @@ async function performTeamkick(member) {
         );
     }
 
-    const warns = loadWarns();
+    const warns =
+        loadWarns();
 
-    delete warns[member.id];
+    delete warns[
+        member.id
+    ];
 
-    saveWarns(warns);
+    saveWarns(
+        warns
+    );
 
-    await updateNametag(member);
-    await updateTeamliste(member.guild);
+    await updateNametag(
+        member
+    );
+
+    await updateTeamliste(
+        member.guild
+    );
 }
 
 /* =========================================================
@@ -530,8 +810,11 @@ function createActionEmbed({
         `**👤 Teammitglied**\n` +
         `> ${member}\n\n`;
 
-    for (const field of fields) {
-        text += `${field}\n\n`;
+    for (
+        const field of fields
+    ) {
+        text +=
+            `${field}\n\n`;
     }
 
     text +=
@@ -546,8 +829,12 @@ function createActionEmbed({
         `╚════════════════════════════════════════════╝`;
 
     return new EmbedBuilder()
-        .setColor(0x2b2d31)
-        .setDescription(text)
+        .setColor(
+            0x2b2d31
+        )
+        .setDescription(
+            text
+        )
         .setTimestamp();
 }
 
@@ -555,20 +842,34 @@ function createActionEmbed({
    TEAMLISTE KATEGORIE
 ========================================================= */
 
-function getTeamlisteCategory(index) {
-    if (index >= 0 && index <= 7) {
+function getTeamlisteCategory(
+    index
+) {
+    if (
+        index >= 0 &&
+        index <= 7
+    ) {
         return "👑 Projektspitze";
     }
 
-    if (index >= 8 && index <= 21) {
+    if (
+        index >= 8 &&
+        index <= 21
+    ) {
         return "🟣 High Team";
     }
 
-    if (index >= 22 && index <= 26) {
+    if (
+        index >= 22 &&
+        index <= 26
+    ) {
         return "🔵 High Administration";
     }
 
-    if (index >= 27 && index <= 35) {
+    if (
+        index >= 27 &&
+        index <= 35
+    ) {
         return "🟢 Low Team";
     }
 
@@ -579,7 +880,9 @@ function getTeamlisteCategory(index) {
    TEAMLISTE EMBED
 ========================================================= */
 
-async function buildTeamlisteEmbed(guild) {
+async function buildTeamlisteEmbed(
+    guild
+) {
     const categories = {
         "👑 Projektspitze": [],
         "🟣 High Team": [],
@@ -616,16 +919,22 @@ async function buildTeamlisteEmbed(guild) {
         description +=
             `**👑 ${inhaberRole.name}**\n`;
 
-        if (members.size === 0) {
+        if (
+            members.size === 0
+        ) {
             description +=
                 `> Keine Mitglieder\n\n`;
         } else {
-            for (const member of members.values()) {
+            for (
+                const member of
+                members.values()
+            ) {
                 description +=
                     `> ${member}\n`;
             }
 
-            description += "\n";
+            description +=
+                "\n";
         }
     }
 
@@ -635,11 +944,14 @@ async function buildTeamlisteEmbed(guild) {
 
     for (
         let index = 0;
-        index < config.TEAM_RANKS.length;
+        index <
+        config.TEAM_RANKS.length;
         index++
     ) {
         const rank =
-            config.TEAM_RANKS[index];
+            config.TEAM_RANKS[
+                index
+            ];
 
         const role =
             guild.roles.cache.get(
@@ -659,9 +971,13 @@ async function buildTeamlisteEmbed(guild) {
             );
 
         const category =
-            getTeamlisteCategory(index);
+            getTeamlisteCategory(
+                index
+            );
 
-        categories[category].push({
+        categories[
+            category
+        ].push({
             role,
             members
         });
@@ -671,25 +987,36 @@ async function buildTeamlisteEmbed(guild) {
         KATEGORIEN
     */
 
-    for (const [
-        categoryName,
-        ranks
-    ] of Object.entries(categories)) {
+    for (
+        const [
+            categoryName,
+            ranks
+        ] of Object.entries(
+            categories
+        )
+    ) {
         description +=
             `## ${categoryName}\n\n`;
 
-        if (ranks.length === 0) {
+        if (
+            ranks.length === 0
+        ) {
             description +=
                 `> Keine Ränge\n\n`;
 
             continue;
         }
 
-        for (const rankData of ranks) {
+        for (
+            const rankData of
+            ranks
+        ) {
             description +=
                 `**${rankData.role.name}**\n`;
 
-            if (rankData.members.size === 0) {
+            if (
+                rankData.members.size === 0
+            ) {
                 description +=
                     `> Keine Mitglieder\n\n`;
             } else {
@@ -701,7 +1028,8 @@ async function buildTeamlisteEmbed(guild) {
                         `> ${member}\n`;
                 }
 
-                description += "\n";
+                description +=
+                    "\n";
             }
         }
     }
@@ -712,22 +1040,32 @@ async function buildTeamlisteEmbed(guild) {
         `╚════════════════════════════════════════════╝`;
 
     return new EmbedBuilder()
-        .setColor(0x2b2d31)
-        .setDescription(description)
+        .setColor(
+            0x2b2d31
+        )
+        .setDescription(
+            description
+        )
         .setFooter({
-            text: "Automatisch aktualisiert"
+            text:
+                "Automatisch aktualisiert"
         })
         .setTimestamp();
 }
 
 /* =========================================================
-   TEAMLISTE AKTUALISIEREN
+   TEAMLISTE UPDATE
 ========================================================= */
 
-async function updateTeamliste(guild) {
+async function updateTeamliste(
+    guild
+) {
     try {
-        const data = loadTeamliste();
-        const saved = data[guild.id];
+        const data =
+            loadTeamliste();
+
+        const saved =
+            data[guild.id];
 
         if (
             !saved ||
@@ -740,7 +1078,9 @@ async function updateTeamliste(guild) {
         const channel =
             await guild.channels.fetch(
                 saved.channelId
-            ).catch(() => null);
+            ).catch(
+                () => null
+            );
 
         if (!channel) {
             return;
@@ -749,34 +1089,39 @@ async function updateTeamliste(guild) {
         const message =
             await channel.messages.fetch(
                 saved.messageId
-            ).catch(() => null);
+            ).catch(
+                () => null
+            );
+
+        const embed =
+            await buildTeamlisteEmbed(
+                guild
+            );
 
         /*
-            Nachricht existiert nicht mehr.
-            Neue Nachricht erstellen.
+            Nachricht gelöscht?
+            Dann neu erstellen.
         */
 
         if (!message) {
-            const newEmbed =
-                await buildTeamlisteEmbed(guild);
-
             const newMessage =
                 await channel.send({
-                    embeds: [newEmbed]
+                    embeds: [embed]
                 });
 
             data[guild.id] = {
-                channelId: channel.id,
-                messageId: newMessage.id
+                channelId:
+                    channel.id,
+                messageId:
+                    newMessage.id
             };
 
-            saveTeamliste(data);
+            saveTeamliste(
+                data
+            );
 
             return;
         }
-
-        const embed =
-            await buildTeamlisteEmbed(guild);
 
         await message.edit({
             embeds: [embed]
@@ -791,236 +1136,223 @@ async function updateTeamliste(guild) {
 }
 
 /* =========================================================
-   SLASH COMMANDS
+   COMMANDS
 ========================================================= */
 
 const commands = [
-
-    /*
-        UPRANK
-    */
 
     new SlashCommandBuilder()
         .setName("uprank")
         .setDescription(
             "Befördert ein Teammitglied"
         )
-        .addUserOption(option =>
-            option
-                .setName("user")
-                .setDescription(
-                    "Teammitglied"
-                )
-                .setRequired(true)
+        .addUserOption(
+            option =>
+                option
+                    .setName("user")
+                    .setDescription(
+                        "Teammitglied"
+                    )
+                    .setRequired(true)
         )
-        .addStringOption(option =>
-            option
-                .setName("grund")
-                .setDescription(
-                    "Grund"
-                )
-                .setRequired(true)
+        .addStringOption(
+            option =>
+                option
+                    .setName("grund")
+                    .setDescription(
+                        "Grund"
+                    )
+                    .setRequired(true)
         ),
-
-    /*
-        DOWNRANK
-    */
 
     new SlashCommandBuilder()
         .setName("downrank")
         .setDescription(
             "Stuft ein Teammitglied herunter"
         )
-        .addUserOption(option =>
-            option
-                .setName("user")
-                .setDescription(
-                    "Teammitglied"
-                )
-                .setRequired(true)
+        .addUserOption(
+            option =>
+                option
+                    .setName("user")
+                    .setDescription(
+                        "Teammitglied"
+                    )
+                    .setRequired(true)
         )
-        .addStringOption(option =>
-            option
-                .setName("grund")
-                .setDescription(
-                    "Grund"
-                )
-                .setRequired(true)
+        .addStringOption(
+            option =>
+                option
+                    .setName("grund")
+                    .setDescription(
+                        "Grund"
+                    )
+                    .setRequired(true)
         ),
-
-    /*
-        TEAMWARN
-    */
 
     new SlashCommandBuilder()
         .setName("teamwarn")
         .setDescription(
             "Verwarnt ein Teammitglied"
         )
-        .addUserOption(option =>
-            option
-                .setName("user")
-                .setDescription(
-                    "Teammitglied"
-                )
-                .setRequired(true)
+        .addUserOption(
+            option =>
+                option
+                    .setName("user")
+                    .setDescription(
+                        "Teammitglied"
+                    )
+                    .setRequired(true)
         )
-        .addStringOption(option =>
-            option
-                .setName("grund")
-                .setDescription(
-                    "Grund"
-                )
-                .setRequired(true)
+        .addStringOption(
+            option =>
+                option
+                    .setName("grund")
+                    .setDescription(
+                        "Grund"
+                    )
+                    .setRequired(true)
         ),
-
-    /*
-        DELETEWARN
-    */
 
     new SlashCommandBuilder()
         .setName("deletewarn")
         .setDescription(
             "Entfernt eine Teamwarnung"
         )
-        .addUserOption(option =>
-            option
-                .setName("user")
-                .setDescription(
-                    "Teammitglied"
-                )
-                .setRequired(true)
+        .addUserOption(
+            option =>
+                option
+                    .setName("user")
+                    .setDescription(
+                        "Teammitglied"
+                    )
+                    .setRequired(true)
         )
-        .addStringOption(option =>
-            option
-                .setName("grund")
-                .setDescription(
-                    "Grund"
-                )
-                .setRequired(true)
+        .addStringOption(
+            option =>
+                option
+                    .setName("grund")
+                    .setDescription(
+                        "Grund"
+                    )
+                    .setRequired(true)
         ),
-
-    /*
-        TEAMKICK
-    */
 
     new SlashCommandBuilder()
         .setName("teamkick")
         .setDescription(
             "Entfernt ein Teammitglied aus dem Team"
         )
-        .addUserOption(option =>
-            option
-                .setName("user")
-                .setDescription(
-                    "Teammitglied"
-                )
-                .setRequired(true)
+        .addUserOption(
+            option =>
+                option
+                    .setName("user")
+                    .setDescription(
+                        "Teammitglied"
+                    )
+                    .setRequired(true)
         )
-        .addStringOption(option =>
-            option
-                .setName("grund")
-                .setDescription(
-                    "Grund"
-                )
-                .setRequired(true)
+        .addStringOption(
+            option =>
+                option
+                    .setName("grund")
+                    .setDescription(
+                        "Grund"
+                    )
+                    .setRequired(true)
         ),
-
-    /*
-        BESTANDEN
-    */
 
     new SlashCommandBuilder()
         .setName("bestanden")
         .setDescription(
             "Nimmt ein neues Teammitglied ins Team auf"
         )
-        .addUserOption(option =>
-            option
-                .setName("user")
-                .setDescription(
-                    "Teammitglied"
-                )
-                .setRequired(true)
+        .addUserOption(
+            option =>
+                option
+                    .setName("user")
+                    .setDescription(
+                        "Teammitglied"
+                    )
+                    .setRequired(true)
         )
-        .addRoleOption(option =>
-            option
-                .setName("rolle")
-                .setDescription(
-                    "Teamrolle"
-                )
-                .setRequired(true)
+        .addRoleOption(
+            option =>
+                option
+                    .setName("rolle")
+                    .setDescription(
+                        "Teamrolle"
+                    )
+                    .setRequired(true)
         )
-        .addStringOption(option =>
-            option
-                .setName("grund")
-                .setDescription(
-                    "Grund"
-                )
-                .setRequired(true)
+        .addStringOption(
+            option =>
+                option
+                    .setName("grund")
+                    .setDescription(
+                        "Grund"
+                    )
+                    .setRequired(true)
         ),
-
-    /*
-        EMBED
-    */
 
     new SlashCommandBuilder()
         .setName("embed")
         .setDescription(
             "Sendet einen eigenen Embed"
         )
-        .addStringOption(option =>
-            option
-                .setName("beschreibung")
-                .setDescription(
-                    "Beschreibung des Embeds"
-                )
-                .setRequired(true)
+        .addStringOption(
+            option =>
+                option
+                    .setName("beschreibung")
+                    .setDescription(
+                        "Beschreibung des Embeds"
+                    )
+                    .setRequired(true)
         )
-        .addStringOption(option =>
-            option
-                .setName("titel")
-                .setDescription(
-                    "Titel"
-                )
-                .setRequired(false)
+        .addStringOption(
+            option =>
+                option
+                    .setName("titel")
+                    .setDescription(
+                        "Titel"
+                    )
+                    .setRequired(false)
         )
-        .addStringOption(option =>
-            option
-                .setName("farbe")
-                .setDescription(
-                    "Hex-Farbe, z.B. #ff0000"
-                )
-                .setRequired(false)
+        .addStringOption(
+            option =>
+                option
+                    .setName("farbe")
+                    .setDescription(
+                        "Hex-Farbe, z.B. #ff0000"
+                    )
+                    .setRequired(false)
         )
-        .addStringOption(option =>
-            option
-                .setName("footer")
-                .setDescription(
-                    "Footer"
-                )
-                .setRequired(false)
+        .addStringOption(
+            option =>
+                option
+                    .setName("footer")
+                    .setDescription(
+                        "Footer"
+                    )
+                    .setRequired(false)
         )
-        .addStringOption(option =>
-            option
-                .setName("bild")
-                .setDescription(
-                    "Bild-URL"
-                )
-                .setRequired(false)
+        .addStringOption(
+            option =>
+                option
+                    .setName("bild")
+                    .setDescription(
+                        "Bild-URL"
+                    )
+                    .setRequired(false)
         )
-        .addStringOption(option =>
-            option
-                .setName("thumbnail")
-                .setDescription(
-                    "Thumbnail-URL"
-                )
-                .setRequired(false)
+        .addStringOption(
+            option =>
+                option
+                    .setName("thumbnail")
+                    .setDescription(
+                        "Thumbnail-URL"
+                    )
+                    .setRequired(false)
         ),
-
-    /*
-        TEAMLISTE
-    */
 
     new SlashCommandBuilder()
         .setName("teamliste")
@@ -1028,84 +1360,103 @@ const commands = [
             "Erstellt oder aktualisiert die Teamliste"
         )
 
-].map(command => command.toJSON());
+].map(
+    command =>
+        command.toJSON()
+);
 
 /* =========================================================
    READY
 ========================================================= */
 
-client.once("ready", async () => {
-    console.log(
-        "===================================="
-    );
-
-    console.log(
-        `Evil RP gestartet als ${client.user.tag}`
-    );
-
-    console.log(
-        "===================================="
-    );
-
-    try {
-        const rest =
-            new REST({
-                version: "10"
-            }).setToken(
-                process.env.DISCORD_TOKEN
-            );
-
-        await rest.put(
-            Routes.applicationGuildCommands(
-                client.user.id,
-                config.GUILD_ID
-            ),
-            {
-                body: commands
-            }
+client.once(
+    "ready",
+    async () => {
+        console.log(
+            "===================================="
         );
 
         console.log(
-            "Slash Commands registriert."
+            `Evil RP gestartet als ${client.user.tag}`
         );
 
-        const guild =
-            client.guilds.cache.get(
-                config.GUILD_ID
+        console.log(
+            "===================================="
+        );
+
+        try {
+            const rest =
+                new REST({
+                    version: "10"
+                }).setToken(
+                    process.env.DISCORD_TOKEN
+                );
+
+            await rest.put(
+                Routes.applicationGuildCommands(
+                    client.user.id,
+                    config.GUILD_ID
+                ),
+                {
+                    body: commands
+                }
             );
 
-        if (guild) {
-            await updateTeamliste(guild);
-        }
+            console.log(
+                "Slash Commands registriert."
+            );
 
-    } catch (error) {
-        console.error(
-            "Ready-Fehler:",
-            error
-        );
+            const guild =
+                client.guilds.cache.get(
+                    config.GUILD_ID
+                );
+
+            if (guild) {
+                await updateTeamliste(
+                    guild
+                );
+            }
+
+        } catch (error) {
+            console.error(
+                "Ready Fehler:",
+                error
+            );
+        }
     }
-});
+);
 
 /* =========================================================
-   ROLLENÄNDERUNG
+   AUTOMATISCHE NAMETAGS
 ========================================================= */
 
 client.on(
     "guildMemberUpdate",
-    async (oldMember, newMember) => {
+    async (
+        oldMember,
+        newMember
+    ) => {
         try {
-            if (newMember.user.bot) {
+            if (
+                newMember.user.bot
+            ) {
                 return;
             }
 
             const oldRoles =
                 oldMember.roles.cache
-                    .map(role => role.id)
+                    .map(
+                        role =>
+                            role.id
+                    )
                     .sort();
 
             const newRoles =
                 newMember.roles.cache
-                    .map(role => role.id)
+                    .map(
+                        role =>
+                            role.id
+                    )
                     .sort();
 
             if (
@@ -1120,6 +1471,7 @@ client.on(
                     newMember.guild
                 );
             }
+
         } catch (error) {
             console.error(
                 "guildMemberUpdate Fehler:",
@@ -1137,18 +1489,21 @@ client.on(
     "interactionCreate",
     async interaction => {
 
-        if (!interaction.isChatInputCommand()) {
+        if (
+            !interaction.isChatInputCommand()
+        ) {
             return;
         }
 
         /*
-            WICHTIG:
+            SEHR WICHTIG:
 
-            Sofort ACK an Discord.
-            Dadurch kommt nicht mehr
-            "Anwendung reagiert nicht",
-            auch wenn danach Rollen/Teamliste
-            etwas länger brauchen.
+            Sofort Discord antworten lassen.
+
+            Dadurch kein:
+            "Anwendung reagiert nicht"
+
+            Danach benutzen wir editReply().
         */
 
         try {
@@ -1157,7 +1512,7 @@ client.on(
             });
         } catch (error) {
             console.error(
-                "Interaction Defer Fehler:",
+                "Defer Fehler:",
                 error.message
             );
 
@@ -1196,10 +1551,6 @@ client.on(
                 const data =
                     loadTeamliste();
 
-                /*
-                    Alte Nachricht suchen
-                */
-
                 if (
                     data[guild.id] &&
                     data[guild.id].channelId &&
@@ -1208,17 +1559,23 @@ client.on(
                     const channel =
                         await guild.channels.fetch(
                             data[guild.id].channelId
-                        ).catch(() => null);
+                        ).catch(
+                            () => null
+                        );
 
                     if (channel) {
                         const message =
                             await channel.messages.fetch(
                                 data[guild.id].messageId
-                            ).catch(() => null);
+                            ).catch(
+                                () => null
+                            );
 
                         if (message) {
                             await message.edit({
-                                embeds: [embed]
+                                embeds: [
+                                    embed
+                                ]
                             });
 
                             return interaction.editReply({
@@ -1228,21 +1585,27 @@ client.on(
                         }
 
                         /*
-                            Alte Nachricht gelöscht:
-                            neue Nachricht erstellen.
+                            Nachricht gelöscht.
+                            Neue Nachricht.
                         */
 
                         const newMessage =
                             await channel.send({
-                                embeds: [embed]
+                                embeds: [
+                                    embed
+                                ]
                             });
 
                         data[guild.id] = {
-                            channelId: channel.id,
-                            messageId: newMessage.id
+                            channelId:
+                                channel.id,
+                            messageId:
+                                newMessage.id
                         };
 
-                        saveTeamliste(data);
+                        saveTeamliste(
+                            data
+                        );
 
                         return interaction.editReply({
                             content:
@@ -1252,31 +1615,36 @@ client.on(
                 }
 
                 /*
-                    Noch keine Teamliste gespeichert.
+                    Noch keine Teamliste
                 */
 
-                const newMessage =
-                    await guild.channels.cache
-                        .get(interaction.channelId)
-                        ?.send({
-                            embeds: [embed]
-                        });
+                const channel =
+                    interaction.channel;
 
-                if (!newMessage) {
+                if (!channel) {
                     return interaction.editReply({
                         content:
-                            "❌ Die Teamliste konnte nicht erstellt werden."
+                            "❌ Kanal konnte nicht gefunden werden."
                     });
                 }
 
+                const message =
+                    await channel.send({
+                        embeds: [
+                            embed
+                        ]
+                    });
+
                 data[guild.id] = {
                     channelId:
-                        newMessage.channel.id,
+                        message.channel.id,
                     messageId:
-                        newMessage.id
+                        message.id
                 };
 
-                saveTeamliste(data);
+                saveTeamliste(
+                    data
+                );
 
                 return interaction.editReply({
                     content:
@@ -1351,7 +1719,9 @@ client.on(
                         );
 
                 if (titel) {
-                    embed.setTitle(titel);
+                    embed.setTitle(
+                        titel
+                    );
                 }
 
                 if (footer) {
@@ -1362,24 +1732,32 @@ client.on(
 
                 if (bild) {
                     try {
-                        new URL(bild);
-                        embed.setImage(bild);
+                        new URL(
+                            bild
+                        );
+
+                        embed.setImage(
+                            bild
+                        );
                     } catch {}
                 }
 
                 if (thumbnail) {
                     try {
-                        new URL(thumbnail);
-                        embed.setThumbnail(thumbnail);
+                        new URL(
+                            thumbnail
+                        );
+
+                        embed.setThumbnail(
+                            thumbnail
+                        );
                     } catch {}
                 }
 
-                /*
-                    Embed öffentlich senden
-                */
-
                 await interaction.channel.send({
-                    embeds: [embed]
+                    embeds: [
+                        embed
+                    ]
                 });
 
                 return interaction.editReply({
@@ -1389,7 +1767,7 @@ client.on(
             }
 
             /* =================================================
-               TARGET
+               USER
             ================================================= */
 
             const target =
@@ -1412,7 +1790,9 @@ client.on(
                 });
             }
 
-            if (target.user.bot) {
+            if (
+                target.user.bot
+            ) {
                 return interaction.editReply({
                     content:
                         "❌ Bots können nicht bearbeitet werden."
@@ -1420,7 +1800,7 @@ client.on(
             }
 
             /* =================================================
-               BERECHTIGUNG
+               TARGET BERECHTIGUNG
             ================================================= */
 
             const permission =
@@ -1429,7 +1809,9 @@ client.on(
                     target
                 );
 
-            if (!permission.allowed) {
+            if (
+                !permission.allowed
+            ) {
                 return interaction.editReply({
                     content:
                         permission.reason
@@ -1445,16 +1827,22 @@ client.on(
                 "uprank"
             ) {
                 const currentIndex =
-                    getRankIndex(target);
+                    getRankIndex(
+                        target
+                    );
 
-                if (currentIndex === -1) {
+                if (
+                    currentIndex === -1
+                ) {
                     return interaction.editReply({
                         content:
                             "❌ Das Mitglied besitzt keinen gültigen Teamrang."
                     });
                 }
 
-                if (currentIndex === 0) {
+                if (
+                    currentIndex === 0
+                ) {
                     return interaction.editReply({
                         content:
                             "❌ Das Mitglied besitzt bereits den höchsten Rang."
@@ -1475,7 +1863,7 @@ client.on(
                     ];
 
                 /*
-                    ALTE HAUPTROLLE WEG
+                    ALTE HAUPTROLLE ENTFERNEN
                 */
 
                 await target.roles.remove(
@@ -1491,10 +1879,11 @@ client.on(
                 );
 
                 /*
-                    NEUE EBENEN DAZU
+                    PASSENDE EBENEN HINZUFÜGEN
 
-                    WICHTIG:
-                    Alte Ebenen werden NICHT entfernt.
+                    Wichtig:
+                    Es werden KEINE alten
+                    Ebenen blind gelöscht.
                 */
 
                 const requiredRoles =
@@ -1517,13 +1906,6 @@ client.on(
                         requiredRoles
                     );
 
-                /*
-                    NEUES EMBED:
-                    Alte Rolle
-                    Neue Rolle
-                    Nebenrolle
-                */
-
                 const embed =
                     createActionEmbed({
                         emoji: "⬆️",
@@ -1543,7 +1925,9 @@ client.on(
                     });
 
                 return interaction.editReply({
-                    embeds: [embed]
+                    embeds: [
+                        embed
+                    ]
                 });
             }
 
@@ -1556,9 +1940,13 @@ client.on(
                 "downrank"
             ) {
                 const currentIndex =
-                    getRankIndex(target);
+                    getRankIndex(
+                        target
+                    );
 
-                if (currentIndex === -1) {
+                if (
+                    currentIndex === -1
+                ) {
                     return interaction.editReply({
                         content:
                             "❌ Das Mitglied besitzt keinen gültigen Teamrang."
@@ -1589,7 +1977,7 @@ client.on(
                     ];
 
                 /*
-                    ALTE HAUPTROLLE WEG
+                    ALTE HAUPTROLLE
                 */
 
                 await target.roles.remove(
@@ -1605,10 +1993,21 @@ client.on(
                 );
 
                 /*
-                    NUR EBENEN ENTFERNEN,
-                    DIE NICHT MEHR VERDIENT SIND.
+                    EBENEN AKTUALISIEREN
 
-                    SERVER TEAM BLEIBT IMMER.
+                    Admin Ebene:
+                    NUR Test admin bis
+                    Head of administration.
+
+                    Mod Ebene:
+                    NUR Test moderator bis
+                    Head of moderation.
+
+                    Supporter Ebene:
+                    NUR Test Supporter bis
+                    Head of support.
+
+                    Server Team bleibt.
                 */
 
                 const requiredRoles =
@@ -1650,7 +2049,9 @@ client.on(
                     });
 
                 return interaction.editReply({
-                    embeds: [embed]
+                    embeds: [
+                        embed
+                    ]
                 });
             }
 
@@ -1666,7 +2067,9 @@ client.on(
                     loadWarns();
 
                 const currentWarn =
-                    warns[target.id] || 0;
+                    warns[
+                        target.id
+                    ] || 0;
 
                 const newWarn =
                     currentWarn + 1;
@@ -1675,7 +2078,9 @@ client.on(
                     Alte Warnrolle entfernen
                 */
 
-                if (currentWarn > 0) {
+                if (
+                    currentWarn > 0
+                ) {
                     const oldWarnRole =
                         config.TEAMWARNS[
                             currentWarn
@@ -1692,7 +2097,9 @@ client.on(
                     3/3
                 */
 
-                if (newWarn >= 3) {
+                if (
+                    newWarn >= 3
+                ) {
                     const warn3Role =
                         config.TEAMWARNS[3];
 
@@ -1702,10 +2109,15 @@ client.on(
                         );
                     }
 
-                    warns[target.id] = 3;
-                    saveWarns(warns);
+                    warns[
+                        target.id
+                    ] = 3;
 
-                    const warnEmbed =
+                    saveWarns(
+                        warns
+                    );
+
+                    const embed =
                         createActionEmbed({
                             emoji: "⚠️",
                             title: "TEAMWARNUNG",
@@ -1718,17 +2130,11 @@ client.on(
                             ]
                         });
 
-                    /*
-                        Warn erstmal anzeigen
-                    */
-
                     await interaction.editReply({
-                        embeds: [warnEmbed]
+                        embeds: [
+                            embed
+                        ]
                     });
-
-                    /*
-                        Danach Kick
-                    */
 
                     await performTeamkick(
                         target
@@ -1752,10 +2158,13 @@ client.on(
                     );
                 }
 
-                warns[target.id] =
-                    newWarn;
+                warns[
+                    target.id
+                ] = newWarn;
 
-                saveWarns(warns);
+                saveWarns(
+                    warns
+                );
 
                 const embed =
                     createActionEmbed({
@@ -1770,7 +2179,9 @@ client.on(
                     });
 
                 return interaction.editReply({
-                    embeds: [embed]
+                    embeds: [
+                        embed
+                    ]
                 });
             }
 
@@ -1786,9 +2197,13 @@ client.on(
                     loadWarns();
 
                 const currentWarn =
-                    warns[target.id] || 0;
+                    warns[
+                        target.id
+                    ] || 0;
 
-                if (currentWarn <= 0) {
+                if (
+                    currentWarn <= 0
+                ) {
                     return interaction.editReply({
                         content:
                             "❌ Dieses Teammitglied hat aktuell keine Teamwarnung."
@@ -1809,7 +2224,9 @@ client.on(
                 const newWarn =
                     currentWarn - 1;
 
-                if (newWarn > 0) {
+                if (
+                    newWarn > 0
+                ) {
                     const newWarnRole =
                         config.TEAMWARNS[
                             newWarn
@@ -1821,13 +2238,18 @@ client.on(
                         );
                     }
 
-                    warns[target.id] =
-                        newWarn;
+                    warns[
+                        target.id
+                    ] = newWarn;
                 } else {
-                    delete warns[target.id];
+                    delete warns[
+                        target.id
+                    ];
                 }
 
-                saveWarns(warns);
+                saveWarns(
+                    warns
+                );
 
                 const embed =
                     createActionEmbed({
@@ -1843,7 +2265,9 @@ client.on(
                     });
 
                 return interaction.editReply({
-                    embeds: [embed]
+                    embeds: [
+                        embed
+                    ]
                 });
             }
 
@@ -1869,7 +2293,9 @@ client.on(
                     });
 
                 return interaction.editReply({
-                    embeds: [embed]
+                    embeds: [
+                        embed
+                    ]
                 });
             }
 
@@ -1893,7 +2319,9 @@ client.on(
                             selectedRole.id
                     );
 
-                if (selectedIndex === -1) {
+                if (
+                    selectedIndex === -1
+                ) {
                     return interaction.editReply({
                         content:
                             "❌ Diese Rolle ist keine gültige Team-Hauptrangrolle."
@@ -1901,7 +2329,7 @@ client.on(
                 }
 
                 /*
-                    Rangberechtigung
+                    RANG VERGABE PRÜFEN
                 */
 
                 if (
@@ -1914,7 +2342,9 @@ client.on(
                             executor
                         );
 
-                    if (executorIndex === -1) {
+                    if (
+                        executorIndex === -1
+                    ) {
                         return interaction.editReply({
                             content:
                                 "❌ Du besitzt keinen gültigen Teamrang."
@@ -1938,12 +2368,20 @@ client.on(
 
                 const oldRanks =
                     config.TEAM_RANKS
-                        .map(rank => rank.id)
-                        .filter(id =>
-                            target.roles.cache.has(id)
+                        .map(
+                            rank =>
+                                rank.id
+                        )
+                        .filter(
+                            id =>
+                                target.roles.cache.has(
+                                    id
+                                )
                         );
 
-                if (oldRanks.length > 0) {
+                if (
+                    oldRanks.length > 0
+                ) {
                     await target.roles.remove(
                         oldRanks
                     );
@@ -1958,7 +2396,7 @@ client.on(
                 );
 
                 /*
-                    BÜRGER BLEIBT
+                    BÜRGER
                 */
 
                 if (
@@ -1972,7 +2410,7 @@ client.on(
                 }
 
                 /*
-                    HAUPTROLLE
+                    NEUE HAUPTROLLE
                 */
 
                 await target.roles.add(
@@ -1980,7 +2418,8 @@ client.on(
                 );
 
                 /*
-                    ALLE BENÖTIGTEN EBENEN
+                    NUR EBENEN, DIE DER RANG
+                    WIRKLICH BEKOMMEN DARF
                 */
 
                 const requiredRoles =
@@ -1990,7 +2429,7 @@ client.on(
                     );
 
                 /*
-                    SERVER TEAM GANZ ZUM SCHLUSS
+                    SERVER TEAM IMMER ZULETZT
                 */
 
                 await target.roles.add(
@@ -2029,12 +2468,14 @@ client.on(
                     });
 
                 return interaction.editReply({
-                    embeds: [embed]
+                    embeds: [
+                        embed
+                    ]
                 });
             }
 
             /*
-                Falls Command unbekannt
+                UNBEKANNTER COMMAND
             */
 
             return interaction.editReply({
@@ -2043,20 +2484,23 @@ client.on(
             });
 
         } catch (error) {
-
             console.error(
                 "Command Fehler:",
                 error
             );
 
             try {
-                if (interaction.deferred) {
+                if (
+                    interaction.deferred
+                ) {
                     await interaction.editReply({
                         content:
                             `❌ Beim Ausführen ist ein Fehler aufgetreten.\n\`\`\`${error.message}\`\`\``
                     });
                 }
-            } catch (replyError) {
+            } catch (
+                replyError
+            ) {
                 console.error(
                     "Fehler beim Senden der Fehlermeldung:",
                     replyError.message
@@ -2070,7 +2514,9 @@ client.on(
    LOGIN
 ========================================================= */
 
-if (!process.env.DISCORD_TOKEN) {
+if (
+    !process.env.DISCORD_TOKEN
+) {
     console.error(
         "❌ DISCORD_TOKEN fehlt in der .env!"
     );
