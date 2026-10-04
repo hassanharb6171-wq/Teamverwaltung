@@ -172,12 +172,11 @@ function getNametagRole(member) {
     );
 
     /*
-        Partner
+        PARTNER
     */
 
     const partnerRole = member.guild.roles.cache.find(
-        role =>
-            role.name.toLowerCase() === "partner"
+        role => role.name.toLowerCase() === "partner"
     );
 
     if (
@@ -188,7 +187,7 @@ function getNametagRole(member) {
     }
 
     /*
-        Höchster Teamrang zuerst
+        HÖCHSTER TEAMRANG
     */
 
     for (const rank of config.TEAM_RANKS) {
@@ -201,7 +200,7 @@ function getNametagRole(member) {
     }
 
     /*
-        Bürger
+        BÜRGER
     */
 
     if (
@@ -255,39 +254,15 @@ async function updateNametag(member) {
 }
 
 /* =========================================================
-   EBENENLOGIK
+   KUMULATIVE EBENEN
 ========================================================= */
-
-/*
-    CUMULATIVE EBENEN
-
-    Co.Owner und höher
-    -> Projektspitze
-
-    Teamleitung und höher
-    -> Teamverwaltung
-
-    Supportleitung und höher
-    -> Leitungsebene
-
-    Fraktions verwaltung und höher
-    -> HighTeam
-
-    Sr.Admin und höher
-    -> Ingame Rechte
-
-    Test admin und höher
-    -> Admin Ebene
-
-    Test moderator und höher
-    -> Moderator Ebene
-
-    Test Supporter und höher
-    -> Supporter Ebene
-*/
 
 function getRequiredAuxiliaryRoles(rankIndex) {
     const roles = [];
+
+    /*
+        Co.Owner und höher
+    */
 
     if (rankIndex <= 3) {
         roles.push(
@@ -295,11 +270,19 @@ function getRequiredAuxiliaryRoles(rankIndex) {
         );
     }
 
+    /*
+        Teamleitung und höher
+    */
+
     if (rankIndex <= 10) {
         roles.push(
             config.AUXILIARY_ROLES.TEAMVERWALTUNG
         );
     }
+
+    /*
+        Supportleitung und höher
+    */
 
     if (rankIndex <= 15) {
         roles.push(
@@ -307,11 +290,19 @@ function getRequiredAuxiliaryRoles(rankIndex) {
         );
     }
 
+    /*
+        Fraktions verwaltung und höher
+    */
+
     if (rankIndex <= 21) {
         roles.push(
             config.AUXILIARY_ROLES.HIGHTEAM
         );
     }
+
+    /*
+        Sr.Admin und höher
+    */
 
     if (rankIndex <= 23) {
         roles.push(
@@ -319,17 +310,29 @@ function getRequiredAuxiliaryRoles(rankIndex) {
         );
     }
 
+    /*
+        Test admin und höher
+    */
+
     if (rankIndex <= 26) {
         roles.push(
             config.AUXILIARY_ROLES.ADMIN_EBENE
         );
     }
 
+    /*
+        Test moderator und höher
+    */
+
     if (rankIndex <= 31) {
         roles.push(
             config.AUXILIARY_ROLES.MODERATOR_EBENE
         );
     }
+
+    /*
+        Test Supporter und höher
+    */
 
     if (rankIndex <= 35) {
         roles.push(
@@ -340,18 +343,30 @@ function getRequiredAuxiliaryRoles(rankIndex) {
     return roles;
 }
 
+function getAuxiliaryNames(guild, roleIds) {
+    const names = [];
+
+    for (const roleId of roleIds) {
+        const role = guild.roles.cache.get(roleId);
+
+        if (role) {
+            names.push(role.name);
+        }
+    }
+
+    return names;
+}
+
 /*
-    Nur für /bestanden:
-    alle Ebenen zurücksetzen.
+    Entfernt wirklich ALLE Nebenrollen.
+
+    Wird nur bei BESTANDEN benutzt,
+    weil dort ein kompletter Reset gewünscht ist.
 */
 
 async function removeAuxiliaryRoles(member) {
     const roleIds = Object.values(
         config.AUXILIARY_ROLES
-    ).filter(
-        roleId =>
-            roleId !==
-            config.AUXILIARY_ROLES.SERVER_TEAM
     );
 
     const removable = roleIds.filter(roleId =>
@@ -364,7 +379,10 @@ async function removeAuxiliaryRoles(member) {
 }
 
 /*
-    Cumulative Ebenen setzen.
+    Fügt alle benötigten Ebenen hinzu.
+
+    Wichtig:
+    Vorhandene Ebenen werden NICHT entfernt.
 */
 
 async function addRequiredAuxiliaryRoles(
@@ -384,19 +402,20 @@ async function addRequiredAuxiliaryRoles(
 }
 
 /*
-    /downrank:
-    Nur Ebenen entfernen, die nach dem neuen Rang
-    nicht mehr erreicht werden.
+    Beim DOWNRANK:
 
-    Server Team wird NIEMALS entfernt.
+    - Ebenen, die noch benötigt werden -> behalten
+    - Ebenen, die nicht mehr benötigt werden -> entfernen
+    - Server Team -> niemals entfernen
+    - fremde Rollen -> niemals anfassen
 */
 
 async function updateAuxiliaryRolesAfterDownrank(
     member,
-    newRankIndex
+    rankIndex
 ) {
     const requiredRoles =
-        getRequiredAuxiliaryRoles(newRankIndex);
+        getRequiredAuxiliaryRoles(rankIndex);
 
     const auxiliaryRoles =
         Object.values(config.AUXILIARY_ROLES);
@@ -434,10 +453,18 @@ const KEEP_ON_TEAMKICK = [
     config.BÜRGER,
     config.TEAMKICK,
 
+    /*
+        Pingrollen
+    */
+
     "1555631609284395013",
     "1555631609284395014",
     "1555631609284395015",
     "1555631609284395016",
+
+    /*
+        Altersrollen
+    */
 
     "1556241121997230161",
     "1556241180474343475",
@@ -480,7 +507,7 @@ async function performTeamkick(member) {
 }
 
 /* =========================================================
-   EMBEDS
+   ACTION EMBED
 ========================================================= */
 
 function createActionEmbed({
@@ -493,6 +520,7 @@ function createActionEmbed({
 }) {
     let text =
         `**Evil RP**\n\n` +
+
         `╔════════════════════════════════════════════╗\n` +
         `║            ${emoji} **${title}**             ║\n` +
         `║              𝑬𝒗𝒊𝒍 𝑹𝑷                    ║\n` +
@@ -524,78 +552,7 @@ function createActionEmbed({
 }
 
 /* =========================================================
-   /EMBED
-========================================================= */
-
-function buildCustomEmbed(interaction) {
-    const title =
-        interaction.options.getString("titel");
-
-    const description =
-        interaction.options.getString("beschreibung");
-
-    const color =
-        interaction.options.getString("farbe");
-
-    const footer =
-        interaction.options.getString("footer");
-
-    const image =
-        interaction.options.getString("bild");
-
-    const thumbnail =
-        interaction.options.getString("thumbnail");
-
-    const embed = new EmbedBuilder()
-        .setDescription(description);
-
-    if (title) {
-        embed.setTitle(title);
-    }
-
-    if (color) {
-        let parsedColor = color.trim();
-
-        if (!parsedColor.startsWith("#")) {
-            parsedColor = `#${parsedColor}`;
-        }
-
-        if (/^#[0-9A-Fa-f]{6}$/.test(parsedColor)) {
-            embed.setColor(parsedColor);
-        } else {
-            embed.setColor(0x2b2d31);
-        }
-    } else {
-        embed.setColor(0x2b2d31);
-    }
-
-    if (footer) {
-        embed.setFooter({
-            text: footer
-        });
-    }
-
-    if (image) {
-        try {
-            new URL(image);
-            embed.setImage(image);
-        } catch {}
-    }
-
-    if (thumbnail) {
-        try {
-            new URL(thumbnail);
-            embed.setThumbnail(thumbnail);
-        } catch {}
-    }
-
-    embed.setTimestamp();
-
-    return embed;
-}
-
-/* =========================================================
-   TEAMLISTE
+   TEAMLISTE KATEGORIE
 ========================================================= */
 
 function getTeamlisteCategory(index) {
@@ -618,16 +575,11 @@ function getTeamlisteCategory(index) {
     return "Team";
 }
 
-async function buildTeamlisteEmbed(guild) {
-    try {
-        await guild.members.fetch();
-    } catch (error) {
-        console.error(
-            "Teamliste Member Fetch Fehler:",
-            error.message
-        );
-    }
+/* =========================================================
+   TEAMLISTE EMBED
+========================================================= */
 
+async function buildTeamlisteEmbed(guild) {
     const categories = {
         "👑 Projektspitze": [],
         "🟣 High Team": [],
@@ -637,13 +589,14 @@ async function buildTeamlisteEmbed(guild) {
 
     let description =
         `**Evil RP**\n\n` +
+
         `╔════════════════════════════════════════════╗\n` +
         `║              👥 **TEAMLISTE**              ║\n` +
         `║              𝑬𝒗𝒊𝒍 𝑹𝑷                    ║\n` +
         `╚════════════════════════════════════════════╝\n\n`;
 
     /*
-        Discord Inhaber zuerst
+        DISCORD INHABER
     */
 
     const inhaberRole =
@@ -653,10 +606,11 @@ async function buildTeamlisteEmbed(guild) {
 
     if (inhaberRole) {
         const members =
-            guild.members.cache.filter(member =>
-                member.roles.cache.has(
-                    inhaberRole.id
-                )
+            guild.members.cache.filter(
+                member =>
+                    member.roles.cache.has(
+                        inhaberRole.id
+                    )
             );
 
         description +=
@@ -676,7 +630,7 @@ async function buildTeamlisteEmbed(guild) {
     }
 
     /*
-        Hauptränge
+        TEAMRÄNGE
     */
 
     for (
@@ -688,15 +642,20 @@ async function buildTeamlisteEmbed(guild) {
             config.TEAM_RANKS[index];
 
         const role =
-            guild.roles.cache.get(rank.id);
+            guild.roles.cache.get(
+                rank.id
+            );
 
         if (!role) {
             continue;
         }
 
         const members =
-            guild.members.cache.filter(member =>
-                member.roles.cache.has(role.id)
+            guild.members.cache.filter(
+                member =>
+                    member.roles.cache.has(
+                        role.id
+                    )
             );
 
         const category =
@@ -709,20 +668,20 @@ async function buildTeamlisteEmbed(guild) {
     }
 
     /*
-        Kategorien
+        KATEGORIEN
     */
 
     for (const [
         categoryName,
         ranks
     ] of Object.entries(categories)) {
-
         description +=
             `## ${categoryName}\n\n`;
 
         if (ranks.length === 0) {
             description +=
                 `> Keine Ränge\n\n`;
+
             continue;
         }
 
@@ -762,7 +721,7 @@ async function buildTeamlisteEmbed(guild) {
 }
 
 /* =========================================================
-   TEAMLISTE UPDATE / SELF HEALING
+   TEAMLISTE AKTUALISIEREN
 ========================================================= */
 
 async function updateTeamliste(guild) {
@@ -779,54 +738,49 @@ async function updateTeamliste(guild) {
         }
 
         const channel =
-            await guild.channels
-                .fetch(saved.channelId)
-                .catch(() => null);
+            await guild.channels.fetch(
+                saved.channelId
+            ).catch(() => null);
 
-        if (!channel || !channel.isTextBased()) {
+        if (!channel) {
+            return;
+        }
+
+        const message =
+            await channel.messages.fetch(
+                saved.messageId
+            ).catch(() => null);
+
+        /*
+            Nachricht existiert nicht mehr.
+            Neue Nachricht erstellen.
+        */
+
+        if (!message) {
+            const newEmbed =
+                await buildTeamlisteEmbed(guild);
+
+            const newMessage =
+                await channel.send({
+                    embeds: [newEmbed]
+                });
+
+            data[guild.id] = {
+                channelId: channel.id,
+                messageId: newMessage.id
+            };
+
+            saveTeamliste(data);
+
             return;
         }
 
         const embed =
             await buildTeamlisteEmbed(guild);
 
-        const message =
-            await channel.messages
-                .fetch(saved.messageId)
-                .catch(() => null);
-
-        /*
-            Nachricht existiert noch
-        */
-
-        if (message) {
-            await message.edit({
-                embeds: [embed]
-            });
-
-            return;
-        }
-
-        /*
-            UNKNOWN MESSAGE / gelöscht:
-            neue Nachricht erstellen
-        */
-
-        const newMessage =
-            await channel.send({
-                embeds: [embed]
-            });
-
-        data[guild.id] = {
-            channelId: channel.id,
-            messageId: newMessage.id
-        };
-
-        saveTeamliste(data);
-
-        console.log(
-            "Teamliste wurde automatisch neu erstellt."
-        );
+        await message.edit({
+            embeds: [embed]
+        });
 
     } catch (error) {
         console.error(
@@ -843,182 +797,236 @@ async function updateTeamliste(guild) {
 const commands = [
 
     /*
-        /embed
-    */
-
-    new SlashCommandBuilder()
-        .setName("embed")
-        .setDescription("Sendet einen eigenen Embed")
-        .addStringOption(option =>
-            option
-                .setName("beschreibung")
-                .setDescription("Beschreibung des Embeds")
-                .setRequired(true)
-        )
-        .addStringOption(option =>
-            option
-                .setName("titel")
-                .setDescription("Titel")
-                .setRequired(false)
-        )
-        .addStringOption(option =>
-            option
-                .setName("farbe")
-                .setDescription("Hex-Farbe, z.B. #ff0000")
-                .setRequired(false)
-        )
-        .addStringOption(option =>
-            option
-                .setName("footer")
-                .setDescription("Footer")
-                .setRequired(false)
-        )
-        .addStringOption(option =>
-            option
-                .setName("bild")
-                .setDescription("Bild-URL")
-                .setRequired(false)
-        )
-        .addStringOption(option =>
-            option
-                .setName("thumbnail")
-                .setDescription("Thumbnail-URL")
-                .setRequired(false)
-        ),
-
-    /*
-        /uprank
+        UPRANK
     */
 
     new SlashCommandBuilder()
         .setName("uprank")
-        .setDescription("Befördert ein Teammitglied")
+        .setDescription(
+            "Befördert ein Teammitglied"
+        )
         .addUserOption(option =>
             option
                 .setName("user")
-                .setDescription("Teammitglied")
+                .setDescription(
+                    "Teammitglied"
+                )
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName("grund")
-                .setDescription("Grund")
+                .setDescription(
+                    "Grund"
+                )
                 .setRequired(true)
         ),
 
     /*
-        /downrank
+        DOWNRANK
     */
 
     new SlashCommandBuilder()
         .setName("downrank")
-        .setDescription("Stuft ein Teammitglied herunter")
+        .setDescription(
+            "Stuft ein Teammitglied herunter"
+        )
         .addUserOption(option =>
             option
                 .setName("user")
-                .setDescription("Teammitglied")
+                .setDescription(
+                    "Teammitglied"
+                )
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName("grund")
-                .setDescription("Grund")
+                .setDescription(
+                    "Grund"
+                )
                 .setRequired(true)
         ),
 
     /*
-        /teamwarn
+        TEAMWARN
     */
 
     new SlashCommandBuilder()
         .setName("teamwarn")
-        .setDescription("Verwarnt ein Teammitglied")
+        .setDescription(
+            "Verwarnt ein Teammitglied"
+        )
         .addUserOption(option =>
             option
                 .setName("user")
-                .setDescription("Teammitglied")
+                .setDescription(
+                    "Teammitglied"
+                )
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName("grund")
-                .setDescription("Grund")
+                .setDescription(
+                    "Grund"
+                )
                 .setRequired(true)
         ),
 
     /*
-        /deletewarn
+        DELETEWARN
     */
 
     new SlashCommandBuilder()
         .setName("deletewarn")
-        .setDescription("Entfernt eine Teamwarnung")
+        .setDescription(
+            "Entfernt eine Teamwarnung"
+        )
         .addUserOption(option =>
             option
                 .setName("user")
-                .setDescription("Teammitglied")
+                .setDescription(
+                    "Teammitglied"
+                )
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName("grund")
-                .setDescription("Grund")
+                .setDescription(
+                    "Grund"
+                )
                 .setRequired(true)
         ),
 
     /*
-        /teamkick
+        TEAMKICK
     */
 
     new SlashCommandBuilder()
         .setName("teamkick")
-        .setDescription("Entfernt ein Teammitglied aus dem Team")
+        .setDescription(
+            "Entfernt ein Teammitglied aus dem Team"
+        )
         .addUserOption(option =>
             option
                 .setName("user")
-                .setDescription("Teammitglied")
+                .setDescription(
+                    "Teammitglied"
+                )
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName("grund")
-                .setDescription("Grund")
+                .setDescription(
+                    "Grund"
+                )
                 .setRequired(true)
         ),
 
     /*
-        /bestanden
+        BESTANDEN
     */
 
     new SlashCommandBuilder()
         .setName("bestanden")
-        .setDescription("Nimmt ein neues Teammitglied ins Team auf")
+        .setDescription(
+            "Nimmt ein neues Teammitglied ins Team auf"
+        )
         .addUserOption(option =>
             option
                 .setName("user")
-                .setDescription("Teammitglied")
+                .setDescription(
+                    "Teammitglied"
+                )
                 .setRequired(true)
         )
         .addRoleOption(option =>
             option
                 .setName("rolle")
-                .setDescription("Teamrolle")
+                .setDescription(
+                    "Teamrolle"
+                )
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName("grund")
-                .setDescription("Grund")
+                .setDescription(
+                    "Grund"
+                )
                 .setRequired(true)
         ),
 
     /*
-        /teamliste
+        EMBED
+    */
+
+    new SlashCommandBuilder()
+        .setName("embed")
+        .setDescription(
+            "Sendet einen eigenen Embed"
+        )
+        .addStringOption(option =>
+            option
+                .setName("beschreibung")
+                .setDescription(
+                    "Beschreibung des Embeds"
+                )
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName("titel")
+                .setDescription(
+                    "Titel"
+                )
+                .setRequired(false)
+        )
+        .addStringOption(option =>
+            option
+                .setName("farbe")
+                .setDescription(
+                    "Hex-Farbe, z.B. #ff0000"
+                )
+                .setRequired(false)
+        )
+        .addStringOption(option =>
+            option
+                .setName("footer")
+                .setDescription(
+                    "Footer"
+                )
+                .setRequired(false)
+        )
+        .addStringOption(option =>
+            option
+                .setName("bild")
+                .setDescription(
+                    "Bild-URL"
+                )
+                .setRequired(false)
+        )
+        .addStringOption(option =>
+            option
+                .setName("thumbnail")
+                .setDescription(
+                    "Thumbnail-URL"
+                )
+                .setRequired(false)
+        ),
+
+    /*
+        TEAMLISTE
     */
 
     new SlashCommandBuilder()
         .setName("teamliste")
-        .setDescription("Erstellt oder aktualisiert die Teamliste")
+        .setDescription(
+            "Erstellt oder aktualisiert die Teamliste"
+        )
 
 ].map(command => command.toJSON());
 
@@ -1067,17 +1075,6 @@ client.once("ready", async () => {
             );
 
         if (guild) {
-            await guild.members.fetch();
-
-            for (
-                const member of
-                guild.members.cache.values()
-            ) {
-                if (!member.user.bot) {
-                    await updateNametag(member);
-                }
-            }
-
             await updateTeamliste(guild);
         }
 
@@ -1090,34 +1087,43 @@ client.once("ready", async () => {
 });
 
 /* =========================================================
-   AUTOMATISCHE NAMETAGS + TEAMLISTE
+   ROLLENÄNDERUNG
 ========================================================= */
 
 client.on(
     "guildMemberUpdate",
     async (oldMember, newMember) => {
+        try {
+            if (newMember.user.bot) {
+                return;
+            }
 
-        if (newMember.user.bot) {
-            return;
-        }
+            const oldRoles =
+                oldMember.roles.cache
+                    .map(role => role.id)
+                    .sort();
 
-        const oldRoles =
-            oldMember.roles.cache
-                .map(role => role.id)
-                .sort();
+            const newRoles =
+                newMember.roles.cache
+                    .map(role => role.id)
+                    .sort();
 
-        const newRoles =
-            newMember.roles.cache
-                .map(role => role.id)
-                .sort();
+            if (
+                oldRoles.join(",") !==
+                newRoles.join(",")
+            ) {
+                await updateNametag(
+                    newMember
+                );
 
-        if (
-            oldRoles.join(",") !==
-            newRoles.join(",")
-        ) {
-            await updateNametag(newMember);
-            await updateTeamliste(
-                newMember.guild
+                await updateTeamliste(
+                    newMember.guild
+                );
+            }
+        } catch (error) {
+            console.error(
+                "guildMemberUpdate Fehler:",
+                error.message
             );
         }
     }
@@ -1135,228 +1141,288 @@ client.on(
             return;
         }
 
-        /* =================================================
-           /EMBED
-        ================================================= */
+        /*
+            WICHTIG:
 
-        if (
-            interaction.commandName ===
-            "embed"
-        ) {
-            if (
-                !isTeamverwaltung(
-                    interaction.member
-                )
-            ) {
-                return interaction.reply({
-                    content:
-                        "❌ Du benötigst die Rolle **Teamverwaltung**.",
-                    ephemeral: true
-                });
-            }
+            Sofort ACK an Discord.
+            Dadurch kommt nicht mehr
+            "Anwendung reagiert nicht",
+            auch wenn danach Rollen/Teamliste
+            etwas länger brauchen.
+        */
 
-            const embed =
-                buildCustomEmbed(
-                    interaction
-                );
-
-            return interaction.reply({
-                embeds: [embed]
-            });
-        }
-
-        /* =================================================
-           /TEAMLISTE
-        ================================================= */
-
-        if (
-            interaction.commandName ===
-            "teamliste"
-        ) {
-            if (
-                !isTeamverwaltung(
-                    interaction.member
-                )
-            ) {
-                return interaction.reply({
-                    content:
-                        "❌ Du benötigst die Rolle **Teamverwaltung**.",
-                    ephemeral: true
-                });
-            }
-
-            /*
-                SOFORT defer,
-                damit Discord nicht nach 3 Sekunden
-                mit Unknown Interaction antwortet.
-            */
-
+        try {
             await interaction.deferReply({
                 ephemeral: false
             });
+        } catch (error) {
+            console.error(
+                "Interaction Defer Fehler:",
+                error.message
+            );
 
-            const guild =
-                interaction.guild;
+            return;
+        }
 
-            const data =
-                loadTeamliste();
+        try {
 
-            const embed =
-                await buildTeamlisteEmbed(
-                    guild
-                );
-
-            const saved =
-                data[guild.id];
-
-            /*
-                Gespeicherte Nachricht suchen
-            */
+            /* =================================================
+               TEAMLISTE
+            ================================================= */
 
             if (
-                saved?.channelId &&
-                saved?.messageId
+                interaction.commandName ===
+                "teamliste"
             ) {
-                const channel =
-                    await guild.channels
-                        .fetch(saved.channelId)
-                        .catch(() => null);
+                if (
+                    !isTeamverwaltung(
+                        interaction.member
+                    )
+                ) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Du benötigst die Rolle **Teamverwaltung**."
+                    });
+                }
+
+                const guild =
+                    interaction.guild;
+
+                const embed =
+                    await buildTeamlisteEmbed(
+                        guild
+                    );
+
+                const data =
+                    loadTeamliste();
+
+                /*
+                    Alte Nachricht suchen
+                */
 
                 if (
-                    channel &&
-                    channel.isTextBased()
+                    data[guild.id] &&
+                    data[guild.id].channelId &&
+                    data[guild.id].messageId
                 ) {
-                    const message =
-                        await channel.messages
-                            .fetch(saved.messageId)
-                            .catch(() => null);
+                    const channel =
+                        await guild.channels.fetch(
+                            data[guild.id].channelId
+                        ).catch(() => null);
 
-                    /*
-                        Nachricht existiert:
-                        einfach bearbeiten.
-                    */
+                    if (channel) {
+                        const message =
+                            await channel.messages.fetch(
+                                data[guild.id].messageId
+                            ).catch(() => null);
 
-                    if (message) {
-                        await message.edit({
-                            embeds: [embed]
+                        if (message) {
+                            await message.edit({
+                                embeds: [embed]
+                            });
+
+                            return interaction.editReply({
+                                content:
+                                    "✅ Die Teamliste wurde aktualisiert."
+                            });
+                        }
+
+                        /*
+                            Alte Nachricht gelöscht:
+                            neue Nachricht erstellen.
+                        */
+
+                        const newMessage =
+                            await channel.send({
+                                embeds: [embed]
+                            });
+
+                        data[guild.id] = {
+                            channelId: channel.id,
+                            messageId: newMessage.id
+                        };
+
+                        saveTeamliste(data);
+
+                        return interaction.editReply({
+                            content:
+                                "✅ Die Teamliste wurde neu erstellt."
                         });
-
-                        return interaction
-                            .deleteReply()
-                            .catch(() => {});
                     }
+                }
 
-                    /*
-                        Nachricht wurde gelöscht:
-                        neue erstellen.
-                    */
+                /*
+                    Noch keine Teamliste gespeichert.
+                */
 
-                    const newMessage =
-                        await channel.send({
+                const newMessage =
+                    await guild.channels.cache
+                        .get(interaction.channelId)
+                        ?.send({
                             embeds: [embed]
                         });
 
-                    data[guild.id] = {
-                        channelId: channel.id,
-                        messageId: newMessage.id
-                    };
-
-                    saveTeamliste(data);
-
-                    return interaction
-                        .deleteReply()
-                        .catch(() => {});
+                if (!newMessage) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Die Teamliste konnte nicht erstellt werden."
+                    });
                 }
-            }
 
-            /*
-                Keine gültige gespeicherte Nachricht:
-                neue Nachricht im aktuellen Kanal.
-            */
+                data[guild.id] = {
+                    channelId:
+                        newMessage.channel.id,
+                    messageId:
+                        newMessage.id
+                };
 
-            if (
-                !interaction.channel ||
-                !interaction.channel.isTextBased()
-            ) {
+                saveTeamliste(data);
+
                 return interaction.editReply({
                     content:
-                        "❌ Dieser Kanal unterstützt keine Teamliste."
+                        "✅ Die Teamliste wurde erstellt."
                 });
             }
 
-            const newMessage =
+            /* =================================================
+               TEAMVERWALTUNG
+            ================================================= */
+
+            if (
+                !isTeamverwaltung(
+                    interaction.member
+                )
+            ) {
+                return interaction.editReply({
+                    content:
+                        "❌ Du benötigst die Rolle **Teamverwaltung**."
+                });
+            }
+
+            /* =================================================
+               EMBED
+            ================================================= */
+
+            if (
+                interaction.commandName ===
+                "embed"
+            ) {
+                const beschreibung =
+                    interaction.options.getString(
+                        "beschreibung"
+                    );
+
+                const titel =
+                    interaction.options.getString(
+                        "titel"
+                    );
+
+                const farbe =
+                    interaction.options.getString(
+                        "farbe"
+                    );
+
+                const footer =
+                    interaction.options.getString(
+                        "footer"
+                    );
+
+                const bild =
+                    interaction.options.getString(
+                        "bild"
+                    );
+
+                const thumbnail =
+                    interaction.options.getString(
+                        "thumbnail"
+                    );
+
+                const embed =
+                    new EmbedBuilder()
+                        .setDescription(
+                            beschreibung
+                        )
+                        .setColor(
+                            /^#[0-9A-Fa-f]{6}$/.test(
+                                farbe || ""
+                            )
+                                ? farbe
+                                : "#2b2d31"
+                        );
+
+                if (titel) {
+                    embed.setTitle(titel);
+                }
+
+                if (footer) {
+                    embed.setFooter({
+                        text: footer
+                    });
+                }
+
+                if (bild) {
+                    try {
+                        new URL(bild);
+                        embed.setImage(bild);
+                    } catch {}
+                }
+
+                if (thumbnail) {
+                    try {
+                        new URL(thumbnail);
+                        embed.setThumbnail(thumbnail);
+                    } catch {}
+                }
+
+                /*
+                    Embed öffentlich senden
+                */
+
                 await interaction.channel.send({
                     embeds: [embed]
                 });
 
-            data[guild.id] = {
-                channelId:
-                    interaction.channel.id,
-                messageId:
-                    newMessage.id
-            };
+                return interaction.editReply({
+                    content:
+                        "✅ Embed wurde gesendet."
+                });
+            }
 
-            saveTeamliste(data);
+            /* =================================================
+               TARGET
+            ================================================= */
 
-            return interaction
-                .deleteReply()
-                .catch(() => {});
-        }
+            const target =
+                interaction.options.getMember(
+                    "user"
+                );
 
-        /* =================================================
-           BERECHTIGUNG
-        ================================================= */
+            const reason =
+                interaction.options.getString(
+                    "grund"
+                );
 
-        if (
-            !isTeamverwaltung(
-                interaction.member
-            )
-        ) {
-            return interaction.reply({
-                content:
-                    "❌ Du benötigst die Rolle **Teamverwaltung**.",
-                ephemeral: true
-            });
-        }
+            const executor =
+                interaction.member;
 
-        const executor =
-            interaction.member;
+            if (!target) {
+                return interaction.editReply({
+                    content:
+                        "❌ Das Teammitglied wurde nicht gefunden."
+                });
+            }
 
-        const target =
-            interaction.options.getMember(
-                "user"
-            );
+            if (target.user.bot) {
+                return interaction.editReply({
+                    content:
+                        "❌ Bots können nicht bearbeitet werden."
+                });
+            }
 
-        const reason =
-            interaction.options.getString(
-                "grund"
-            );
+            /* =================================================
+               BERECHTIGUNG
+            ================================================= */
 
-        if (!target) {
-            return interaction.reply({
-                content:
-                    "❌ Das Teammitglied wurde nicht gefunden.",
-                ephemeral: true
-            });
-        }
-
-        if (target.user.bot) {
-            return interaction.reply({
-                content:
-                    "❌ Bots können nicht bearbeitet werden.",
-                ephemeral: true
-            });
-        }
-
-        /*
-            BESTANDEN darf auch auf Bürger
-            ohne bisherigen Teamrang.
-        */
-
-        if (
-            interaction.commandName !==
-            "bestanden"
-        ) {
             const permission =
                 canManageTarget(
                     executor,
@@ -1364,363 +1430,317 @@ client.on(
                 );
 
             if (!permission.allowed) {
-                return interaction.reply({
+                return interaction.editReply({
                     content:
-                        permission.reason,
-                    ephemeral: true
-                });
-            }
-        }
-
-        /* =================================================
-           UPRANK
-        ================================================= */
-
-        if (
-            interaction.commandName ===
-            "uprank"
-        ) {
-            const currentIndex =
-                getRankIndex(target);
-
-            if (currentIndex === -1) {
-                return interaction.reply({
-                    content:
-                        "❌ Das Mitglied besitzt keinen gültigen Teamrang.",
-                    ephemeral: true
+                        permission.reason
                 });
             }
 
-            if (currentIndex === 0) {
-                return interaction.reply({
-                    content:
-                        "❌ Das Mitglied besitzt bereits den höchsten Rang.",
-                    ephemeral: true
-                });
-            }
-
-            const oldRank =
-                config.TEAM_RANKS[
-                    currentIndex
-                ];
-
-            const newIndex =
-                currentIndex - 1;
-
-            const newRank =
-                config.TEAM_RANKS[
-                    newIndex
-                ];
-
-            /*
-                Nur MAIN-Rolle wechseln.
-                KEINE Ebenen entfernen.
-            */
-
-            await target.roles.remove(
-                oldRank.id
-            );
-
-            await target.roles.add(
-                newRank.id
-            );
-
-            /*
-                Neue freigeschaltete Ebenen hinzufügen.
-            */
-
-            const requiredRoles =
-                await addRequiredAuxiliaryRoles(
-                    target,
-                    newIndex
-                );
-
-            await updateNametag(target);
-            await updateTeamliste(
-                target.guild
-            );
-
-            const levelNames =
-                requiredRoles
-                    .map(id =>
-                        interaction.guild.roles.cache.get(id)
-                    )
-                    .filter(Boolean)
-                    .map(role => role.name)
-                    .join(", ");
-
-            const embed =
-                createActionEmbed({
-                    emoji: "⬆️",
-                    title: "UPRANK",
-                    member: target,
-                    reason,
-                    executor,
-                    fields: [
-                        `**⬆️ Neue Rolle**\n> ${newRank.name}`,
-                        `**🛡️ Ebenen**\n> ${levelNames || "Keine"}`
-                    ]
-                });
-
-            return interaction.reply({
-                embeds: [embed]
-            });
-        }
-
-        /* =================================================
-           DOWNRANK
-        ================================================= */
-
-        if (
-            interaction.commandName ===
-            "downrank"
-        ) {
-            const currentIndex =
-                getRankIndex(target);
-
-            if (currentIndex === -1) {
-                return interaction.reply({
-                    content:
-                        "❌ Das Mitglied besitzt keinen gültigen Teamrang.",
-                    ephemeral: true
-                });
-            }
+            /* =================================================
+               UPRANK
+            ================================================= */
 
             if (
-                currentIndex ===
-                config.TEAM_RANKS.length - 1
+                interaction.commandName ===
+                "uprank"
             ) {
-                return interaction.reply({
-                    content:
-                        "❌ Das Mitglied besitzt bereits den niedrigsten Rang.",
-                    ephemeral: true
-                });
-            }
+                const currentIndex =
+                    getRankIndex(target);
 
-            const oldRank =
-                config.TEAM_RANKS[
-                    currentIndex
-                ];
-
-            const newIndex =
-                currentIndex + 1;
-
-            const newRank =
-                config.TEAM_RANKS[
-                    newIndex
-                ];
-
-            /*
-                Nur MAIN-Rolle wechseln.
-            */
-
-            await target.roles.remove(
-                oldRank.id
-            );
-
-            await target.roles.add(
-                newRank.id
-            );
-
-            /*
-                Nur Ebenen entfernen,
-                deren Grenze nicht mehr erreicht wird.
-
-                Server Team bleibt immer.
-            */
-
-            const requiredRoles =
-                await updateAuxiliaryRolesAfterDownrank(
-                    target,
-                    newIndex
-                );
-
-            await updateNametag(target);
-            await updateTeamliste(
-                target.guild
-            );
-
-            const levelNames =
-                requiredRoles
-                    .map(id =>
-                        interaction.guild.roles.cache.get(id)
-                    )
-                    .filter(Boolean)
-                    .map(role => role.name)
-                    .join(", ");
-
-            const embed =
-                createActionEmbed({
-                    emoji: "⬇️",
-                    title: "DOWNRANK",
-                    member: target,
-                    reason,
-                    executor,
-                    fields: [
-                        `**⬇️ Neue Rolle**\n> ${newRank.name}`,
-                        `**🛡️ Aktive Ebenen**\n> ${levelNames || "Keine"}`,
-                        `**👥 Server Team**\n> Bleibt erhalten`
-                    ]
-                });
-
-            return interaction.reply({
-                embeds: [embed]
-            });
-        }
-
-        /* =================================================
-           TEAMWARN
-        ================================================= */
-
-        if (
-            interaction.commandName ===
-            "teamwarn"
-        ) {
-            const warns =
-                loadWarns();
-
-            const currentWarn =
-                warns[target.id] || 0;
-
-            const newWarn =
-                currentWarn + 1;
-
-            /*
-                3/3 -> automatischer Teamkick
-            */
-
-            if (newWarn >= 3) {
-
-                /*
-                    3/3 Rolle setzen
-                */
-
-                if (
-                    config.TEAMWARNS[3]
-                ) {
-                    await target.roles.add(
-                        config.TEAMWARNS[3]
-                    );
+                if (currentIndex === -1) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Das Mitglied besitzt keinen gültigen Teamrang."
+                    });
                 }
 
-                warns[target.id] = 3;
-                saveWarns(warns);
+                if (currentIndex === 0) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Das Mitglied besitzt bereits den höchsten Rang."
+                    });
+                }
+
+                const oldRank =
+                    config.TEAM_RANKS[
+                        currentIndex
+                    ];
+
+                const newIndex =
+                    currentIndex - 1;
+
+                const newRank =
+                    config.TEAM_RANKS[
+                        newIndex
+                    ];
+
+                /*
+                    ALTE HAUPTROLLE WEG
+                */
+
+                await target.roles.remove(
+                    oldRank.id
+                );
+
+                /*
+                    NEUE HAUPTROLLE
+                */
+
+                await target.roles.add(
+                    newRank.id
+                );
+
+                /*
+                    NEUE EBENEN DAZU
+
+                    WICHTIG:
+                    Alte Ebenen werden NICHT entfernt.
+                */
+
+                const requiredRoles =
+                    await addRequiredAuxiliaryRoles(
+                        target,
+                        newIndex
+                    );
+
+                await updateNametag(
+                    target
+                );
+
+                await updateTeamliste(
+                    target.guild
+                );
+
+                const levelNames =
+                    getAuxiliaryNames(
+                        interaction.guild,
+                        requiredRoles
+                    );
+
+                /*
+                    NEUES EMBED:
+                    Alte Rolle
+                    Neue Rolle
+                    Nebenrolle
+                */
 
                 const embed =
                     createActionEmbed({
-                        emoji: "⚠️",
-                        title: "TEAMWARNUNG",
+                        emoji: "⬆️",
+                        title: "UPRANK",
                         member: target,
                         reason,
                         executor,
                         fields: [
-                            `**⚠️ Verwarnungsstufe**\n> Teamwarn 3/3`,
-                            `**🚫 Folge**\n> Automatischer Teamkick`
+                            `**🔻 Alte Rolle**\n> ${oldRank.name}`,
+                            `**🔺 Neue Rolle**\n> ${newRank.name}`,
+                            `**🛡️ Nebenrolle**\n> ${
+                                levelNames.length > 0
+                                    ? levelNames.join(", ")
+                                    : "Keine"
+                            }`
                         ]
                     });
 
-                await interaction.reply({
+                return interaction.editReply({
                     embeds: [embed]
                 });
+            }
 
-                await performTeamkick(
+            /* =================================================
+               DOWNRANK
+            ================================================= */
+
+            if (
+                interaction.commandName ===
+                "downrank"
+            ) {
+                const currentIndex =
+                    getRankIndex(target);
+
+                if (currentIndex === -1) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Das Mitglied besitzt keinen gültigen Teamrang."
+                    });
+                }
+
+                if (
+                    currentIndex ===
+                    config.TEAM_RANKS.length - 1
+                ) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Das Mitglied besitzt bereits den niedrigsten Rang."
+                    });
+                }
+
+                const oldRank =
+                    config.TEAM_RANKS[
+                        currentIndex
+                    ];
+
+                const newIndex =
+                    currentIndex + 1;
+
+                const newRank =
+                    config.TEAM_RANKS[
+                        newIndex
+                    ];
+
+                /*
+                    ALTE HAUPTROLLE WEG
+                */
+
+                await target.roles.remove(
+                    oldRank.id
+                );
+
+                /*
+                    NEUE HAUPTROLLE
+                */
+
+                await target.roles.add(
+                    newRank.id
+                );
+
+                /*
+                    NUR EBENEN ENTFERNEN,
+                    DIE NICHT MEHR VERDIENT SIND.
+
+                    SERVER TEAM BLEIBT IMMER.
+                */
+
+                const requiredRoles =
+                    await updateAuxiliaryRolesAfterDownrank(
+                        target,
+                        newIndex
+                    );
+
+                await updateNametag(
                     target
                 );
 
-                return;
-            }
+                await updateTeamliste(
+                    target.guild
+                );
 
-            /*
-                Alte Warnrolle entfernen
-            */
-
-            if (currentWarn > 0) {
-                const oldWarnRole =
-                    config.TEAMWARNS[
-                        currentWarn
-                    ];
-
-                if (oldWarnRole) {
-                    await target.roles.remove(
-                        oldWarnRole
+                const levelNames =
+                    getAuxiliaryNames(
+                        interaction.guild,
+                        requiredRoles
                     );
+
+                const embed =
+                    createActionEmbed({
+                        emoji: "⬇️",
+                        title: "DOWNRANK",
+                        member: target,
+                        reason,
+                        executor,
+                        fields: [
+                            `**🔻 Alte Rolle**\n> ${oldRank.name}`,
+                            `**🔺 Neue Rolle**\n> ${newRank.name}`,
+                            `**🛡️ Nebenrolle**\n> ${
+                                levelNames.length > 0
+                                    ? levelNames.join(", ")
+                                    : "Keine"
+                            }`
+                        ]
+                    });
+
+                return interaction.editReply({
+                    embeds: [embed]
+                });
+            }
+
+            /* =================================================
+               TEAMWARN
+            ================================================= */
+
+            if (
+                interaction.commandName ===
+                "teamwarn"
+            ) {
+                const warns =
+                    loadWarns();
+
+                const currentWarn =
+                    warns[target.id] || 0;
+
+                const newWarn =
+                    currentWarn + 1;
+
+                /*
+                    Alte Warnrolle entfernen
+                */
+
+                if (currentWarn > 0) {
+                    const oldWarnRole =
+                        config.TEAMWARNS[
+                            currentWarn
+                        ];
+
+                    if (oldWarnRole) {
+                        await target.roles.remove(
+                            oldWarnRole
+                        );
+                    }
                 }
-            }
 
-            /*
-                Neue Warnrolle
-            */
+                /*
+                    3/3
+                */
 
-            const newWarnRole =
-                config.TEAMWARNS[
-                    newWarn
-                ];
+                if (newWarn >= 3) {
+                    const warn3Role =
+                        config.TEAMWARNS[3];
 
-            if (newWarnRole) {
-                await target.roles.add(
-                    newWarnRole
-                );
-            }
+                    if (warn3Role) {
+                        await target.roles.add(
+                            warn3Role
+                        );
+                    }
 
-            warns[target.id] =
-                newWarn;
+                    warns[target.id] = 3;
+                    saveWarns(warns);
 
-            saveWarns(warns);
+                    const warnEmbed =
+                        createActionEmbed({
+                            emoji: "⚠️",
+                            title: "TEAMWARNUNG",
+                            member: target,
+                            reason,
+                            executor,
+                            fields: [
+                                `**⚠️ Verwarnungsstufe**\n> Teamwarn 3/3`,
+                                `**🚫 Folge**\n> Automatischer Teamkick`
+                            ]
+                        });
 
-            const embed =
-                createActionEmbed({
-                    emoji: "⚠️",
-                    title: "TEAMWARNUNG",
-                    member: target,
-                    reason,
-                    executor,
-                    fields: [
-                        `**⚠️ Verwarnungsstufe**\n> Teamwarn ${newWarn}/3`
-                    ]
-                });
+                    /*
+                        Warn erstmal anzeigen
+                    */
 
-            return interaction.reply({
-                embeds: [embed]
-            });
-        }
+                    await interaction.editReply({
+                        embeds: [warnEmbed]
+                    });
 
-        /* =================================================
-           DELETEWARN
-        ================================================= */
+                    /*
+                        Danach Kick
+                    */
 
-        if (
-            interaction.commandName ===
-            "deletewarn"
-        ) {
-            const warns =
-                loadWarns();
+                    await performTeamkick(
+                        target
+                    );
 
-            const currentWarn =
-                warns[target.id] || 0;
+                    return;
+                }
 
-            if (currentWarn <= 0) {
-                return interaction.reply({
-                    content:
-                        "❌ Dieses Teammitglied hat aktuell keine Teamwarnung.",
-                    ephemeral: true
-                });
-            }
+                /*
+                    Neue Warnrolle
+                */
 
-            const currentWarnRole =
-                config.TEAMWARNS[
-                    currentWarn
-                ];
-
-            if (currentWarnRole) {
-                await target.roles.remove(
-                    currentWarnRole
-                );
-            }
-
-            const newWarn =
-                currentWarn - 1;
-
-            if (newWarn > 0) {
                 const newWarnRole =
                     config.TEAMWARNS[
                         newWarn
@@ -1734,230 +1754,314 @@ client.on(
 
                 warns[target.id] =
                     newWarn;
-            } else {
-                delete warns[target.id];
-            }
 
-            saveWarns(warns);
+                saveWarns(warns);
 
-            const embed =
-                createActionEmbed({
-                    emoji: "🗑️",
-                    title: "DELETEWARN",
-                    member: target,
-                    reason,
-                    executor,
-                    fields: [
-                        `**⚠️ Alte Verwarnungsstufe**\n> Teamwarn ${currentWarn}/3`,
-                        `**✅ Neue Verwarnungsstufe**\n> ${newWarn}/3`
-                    ]
-                });
+                const embed =
+                    createActionEmbed({
+                        emoji: "⚠️",
+                        title: "TEAMWARNUNG",
+                        member: target,
+                        reason,
+                        executor,
+                        fields: [
+                            `**⚠️ Verwarnungsstufe**\n> Teamwarn ${newWarn}/3`
+                        ]
+                    });
 
-            return interaction.reply({
-                embeds: [embed]
-            });
-        }
-
-        /* =================================================
-           TEAMKICK
-        ================================================= */
-
-        if (
-            interaction.commandName ===
-            "teamkick"
-        ) {
-            /*
-                Bürger bleibt erhalten.
-                Teamkick + Ping + Altersrollen bleiben.
-            */
-
-            await performTeamkick(
-                target
-            );
-
-            const embed =
-                createActionEmbed({
-                    emoji: "🚫",
-                    title: "TEAMKICK",
-                    member: target,
-                    reason,
-                    executor
-                });
-
-            return interaction.reply({
-                embeds: [embed]
-            });
-        }
-
-        /* =================================================
-           BESTANDEN
-        ================================================= */
-
-        if (
-            interaction.commandName ===
-            "bestanden"
-        ) {
-            const selectedRole =
-                interaction.options.getRole(
-                    "rolle"
-                );
-
-            if (!selectedRole) {
-                return interaction.reply({
-                    content:
-                        "❌ Keine Teamrolle ausgewählt.",
-                    ephemeral: true
+                return interaction.editReply({
+                    embeds: [embed]
                 });
             }
 
-            const selectedIndex =
-                config.TEAM_RANKS.findIndex(
-                    rank =>
-                        rank.id ===
-                        selectedRole.id
-                );
-
-            if (selectedIndex === -1) {
-                return interaction.reply({
-                    content:
-                        "❌ Diese Rolle ist keine gültige Team-Hauptrangrolle.",
-                    ephemeral: true
-                });
-            }
-
-            /*
-                Rangvergabe prüfen
-            */
+            /* =================================================
+               DELETEWARN
+            ================================================= */
 
             if (
-                !isDiscordInhaber(
-                    executor
-                )
+                interaction.commandName ===
+                "deletewarn"
             ) {
-                const executorIndex =
-                    getRankIndex(
-                        executor
-                    );
+                const warns =
+                    loadWarns();
 
-                if (executorIndex === -1) {
-                    return interaction.reply({
+                const currentWarn =
+                    warns[target.id] || 0;
+
+                if (currentWarn <= 0) {
+                    return interaction.editReply({
                         content:
-                            "❌ Du besitzt keinen gültigen Teamrang.",
-                        ephemeral: true
+                            "❌ Dieses Teammitglied hat aktuell keine Teamwarnung."
                     });
                 }
+
+                const currentWarnRole =
+                    config.TEAMWARNS[
+                        currentWarn
+                    ];
+
+                if (currentWarnRole) {
+                    await target.roles.remove(
+                        currentWarnRole
+                    );
+                }
+
+                const newWarn =
+                    currentWarn - 1;
+
+                if (newWarn > 0) {
+                    const newWarnRole =
+                        config.TEAMWARNS[
+                            newWarn
+                        ];
+
+                    if (newWarnRole) {
+                        await target.roles.add(
+                            newWarnRole
+                        );
+                    }
+
+                    warns[target.id] =
+                        newWarn;
+                } else {
+                    delete warns[target.id];
+                }
+
+                saveWarns(warns);
+
+                const embed =
+                    createActionEmbed({
+                        emoji: "🗑️",
+                        title: "DELETEWARN",
+                        member: target,
+                        reason,
+                        executor,
+                        fields: [
+                            `**⚠️ Alte Verwarnungsstufe**\n> Teamwarn ${currentWarn}/3`,
+                            `**✅ Neue Verwarnungsstufe**\n> ${newWarn}/3`
+                        ]
+                    });
+
+                return interaction.editReply({
+                    embeds: [embed]
+                });
+            }
+
+            /* =================================================
+               TEAMKICK
+            ================================================= */
+
+            if (
+                interaction.commandName ===
+                "teamkick"
+            ) {
+                await performTeamkick(
+                    target
+                );
+
+                const embed =
+                    createActionEmbed({
+                        emoji: "🚫",
+                        title: "TEAMKICK",
+                        member: target,
+                        reason,
+                        executor
+                    });
+
+                return interaction.editReply({
+                    embeds: [embed]
+                });
+            }
+
+            /* =================================================
+               BESTANDEN
+            ================================================= */
+
+            if (
+                interaction.commandName ===
+                "bestanden"
+            ) {
+                const selectedRole =
+                    interaction.options.getRole(
+                        "rolle"
+                    );
+
+                const selectedIndex =
+                    config.TEAM_RANKS.findIndex(
+                        rank =>
+                            rank.id ===
+                            selectedRole.id
+                    );
+
+                if (selectedIndex === -1) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Diese Rolle ist keine gültige Team-Hauptrangrolle."
+                    });
+                }
+
+                /*
+                    Rangberechtigung
+                */
 
                 if (
-                    selectedIndex <=
-                    executorIndex
+                    !isDiscordInhaber(
+                        executor
+                    )
                 ) {
-                    return interaction.reply({
-                        content:
-                            "❌ Du kannst deinen eigenen oder einen höheren Rang nicht vergeben.",
-                        ephemeral: true
-                    });
+                    const executorIndex =
+                        getRankIndex(
+                            executor
+                        );
+
+                    if (executorIndex === -1) {
+                        return interaction.editReply({
+                            content:
+                                "❌ Du besitzt keinen gültigen Teamrang."
+                        });
+                    }
+
+                    if (
+                        selectedIndex <=
+                        executorIndex
+                    ) {
+                        return interaction.editReply({
+                            content:
+                                "❌ Du kannst deinen eigenen oder einen höheren Rang nicht vergeben."
+                        });
+                    }
                 }
-            }
 
-            /*
-                Alte Hauptränge entfernen
-            */
+                /*
+                    ALTE HAUPTRÄNGE ENTFERNEN
+                */
 
-            const oldRanks =
-                config.TEAM_RANKS
-                    .map(rank => rank.id)
-                    .filter(id =>
-                        target.roles.cache.has(
-                            id
-                        )
+                const oldRanks =
+                    config.TEAM_RANKS
+                        .map(rank => rank.id)
+                        .filter(id =>
+                            target.roles.cache.has(id)
+                        );
+
+                if (oldRanks.length > 0) {
+                    await target.roles.remove(
+                        oldRanks
+                    );
+                }
+
+                /*
+                    ALTE EBENEN RESETTEN
+                */
+
+                await removeAuxiliaryRoles(
+                    target
+                );
+
+                /*
+                    BÜRGER BLEIBT
+                */
+
+                if (
+                    !target.roles.cache.has(
+                        config.BÜRGER
+                    )
+                ) {
+                    await target.roles.add(
+                        config.BÜRGER
+                    );
+                }
+
+                /*
+                    HAUPTROLLE
+                */
+
+                await target.roles.add(
+                    selectedRole.id
+                );
+
+                /*
+                    ALLE BENÖTIGTEN EBENEN
+                */
+
+                const requiredRoles =
+                    await addRequiredAuxiliaryRoles(
+                        target,
+                        selectedIndex
                     );
 
-            if (oldRanks.length > 0) {
-                await target.roles.remove(
-                    oldRanks
-                );
-            }
+                /*
+                    SERVER TEAM GANZ ZUM SCHLUSS
+                */
 
-            /*
-                Alte Ebenen entfernen
-            */
-
-            await removeAuxiliaryRoles(
-                target
-            );
-
-            /*
-                Bürger behalten / hinzufügen
-            */
-
-            if (
-                !target.roles.cache.has(
-                    config.BÜRGER
-                )
-            ) {
                 await target.roles.add(
-                    config.BÜRGER
+                    config.AUXILIARY_ROLES.SERVER_TEAM
                 );
+
+                await updateNametag(
+                    target
+                );
+
+                await updateTeamliste(
+                    target.guild
+                );
+
+                const levelNames =
+                    getAuxiliaryNames(
+                        interaction.guild,
+                        requiredRoles
+                    );
+
+                const embed =
+                    createActionEmbed({
+                        emoji: "✅",
+                        title: "BESTANDEN",
+                        member: target,
+                        reason,
+                        executor,
+                        fields: [
+                            `**🎖️ Neue Rolle**\n> ${selectedRole.name}`,
+                            `**🛡️ Nebenrolle**\n> ${
+                                levelNames.length > 0
+                                    ? levelNames.join(", ")
+                                    : "Keine"
+                            }`
+                        ]
+                    });
+
+                return interaction.editReply({
+                    embeds: [embed]
+                });
             }
 
             /*
-                Teamrolle
+                Falls Command unbekannt
             */
 
-            await target.roles.add(
-                selectedRole.id
-            );
-
-            /*
-                Server Team NACH dem Reset.
-                Wird dadurch niemals versehentlich gelöscht.
-            */
-
-            await target.roles.add(
-                config.AUXILIARY_ROLES.SERVER_TEAM
-            );
-
-            /*
-                Alle passenden cumulative Ebenen setzen
-            */
-
-            const requiredRoles =
-                await addRequiredAuxiliaryRoles(
-                    target,
-                    selectedIndex
-                );
-
-            await updateNametag(target);
-            await updateTeamliste(
-                target.guild
-            );
-
-            const levelNames =
-                requiredRoles
-                    .map(id =>
-                        interaction.guild.roles.cache.get(id)
-                    )
-                    .filter(Boolean)
-                    .map(role => role.name)
-                    .join(", ");
-
-            const embed =
-                createActionEmbed({
-                    emoji: "✅",
-                    title: "BESTANDEN",
-                    member: target,
-                    reason,
-                    executor,
-                    fields: [
-                        `**🎖️ Neue Rolle**\n> ${selectedRole.name}`,
-                        `**🛡️ Ebenen**\n> ${levelNames || "Keine"}`,
-                        `**👥 Teamrolle**\n> Server Team`
-                    ]
-                });
-
-            return interaction.reply({
-                embeds: [embed]
+            return interaction.editReply({
+                content:
+                    "❌ Dieser Command konnte nicht verarbeitet werden."
             });
+
+        } catch (error) {
+
+            console.error(
+                "Command Fehler:",
+                error
+            );
+
+            try {
+                if (interaction.deferred) {
+                    await interaction.editReply({
+                        content:
+                            `❌ Beim Ausführen ist ein Fehler aufgetreten.\n\`\`\`${error.message}\`\`\``
+                    });
+                }
+            } catch (replyError) {
+                console.error(
+                    "Fehler beim Senden der Fehlermeldung:",
+                    replyError.message
+                );
+            }
         }
     }
 );
