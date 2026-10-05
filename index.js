@@ -25,8 +25,21 @@ const client = new Client({
 });
 
 const DATA_DIR = path.join(__dirname, "data");
-const WARN_FILE = path.join(DATA_DIR, "teamwarns.json");
-const TEAMLIST_FILE = path.join(DATA_DIR, "teamliste.json");
+
+const WARN_FILE = path.join(
+    DATA_DIR,
+    "teamwarns.json"
+);
+
+const TEAMLIST_FILE = path.join(
+    DATA_DIR,
+    "teamliste.json"
+);
+
+const SERVERCODE_FILE = path.join(
+    DATA_DIR,
+    "servercode.json"
+);
 
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, {
@@ -44,6 +57,13 @@ if (!fs.existsSync(WARN_FILE)) {
 if (!fs.existsSync(TEAMLIST_FILE)) {
     fs.writeFileSync(
         TEAMLIST_FILE,
+        "{}"
+    );
+}
+
+if (!fs.existsSync(SERVERCODE_FILE)) {
+    fs.writeFileSync(
+        SERVERCODE_FILE,
         "{}"
     );
 }
@@ -97,6 +117,55 @@ function saveTeamliste(data) {
             null,
             2
         )
+    );
+}
+
+/* =========================================================
+   SERVERCODE
+========================================================= */
+
+function loadServerCodes() {
+    try {
+        return JSON.parse(
+            fs.readFileSync(
+                SERVERCODE_FILE,
+                "utf8"
+            )
+        );
+    } catch {
+        return {};
+    }
+}
+
+function saveServerCodes(data) {
+    fs.writeFileSync(
+        SERVERCODE_FILE,
+        JSON.stringify(
+            data,
+            null,
+            2
+        )
+    );
+}
+
+function getServerCode(guildId) {
+    const data =
+        loadServerCodes();
+
+    return data[guildId] || null;
+}
+
+function setServerCode(
+    guildId,
+    code
+) {
+    const data =
+        loadServerCodes();
+
+    data[guildId] = code;
+
+    saveServerCodes(
+        data
     );
 }
 
@@ -351,34 +420,13 @@ async function updateNametag(member) {
    EBENEN
 ========================================================= */
 
-/*
-    WICHTIG:
-
-    Diese Funktion gibt NICHT mehr einfach
-    alle Ebenen für höhere Ränge zurück.
-
-    Die drei Bereiche sind FEST:
-
-    ADMIN EBENE:
-    Test admin -> Head of administration
-
-    MODERATOR EBENE:
-    Test moderator -> Head of moderation
-
-    SUPPORTER EBENE:
-    Test Supporter -> Head of support
-*/
-
 function getRequiredAuxiliaryRoles(
     rankIndex
 ) {
     const roles = [];
 
     /*
-        =========================================
         PROJEKTSPITZE
-        Co.Owner und höher
-        =========================================
     */
 
     if (
@@ -391,10 +439,7 @@ function getRequiredAuxiliaryRoles(
     }
 
     /*
-        =========================================
         TEAMVERWALTUNG
-        Teamleitung und höher
-        =========================================
     */
 
     if (
@@ -407,10 +452,7 @@ function getRequiredAuxiliaryRoles(
     }
 
     /*
-        =========================================
         LEITUNGSEBENE
-        Supportleitung und höher
-        =========================================
     */
 
     if (
@@ -423,10 +465,7 @@ function getRequiredAuxiliaryRoles(
     }
 
     /*
-        =========================================
         HIGHTEAM
-        Fraktions verwaltung und höher
-        =========================================
     */
 
     if (
@@ -439,10 +478,7 @@ function getRequiredAuxiliaryRoles(
     }
 
     /*
-        =========================================
         INGAME RECHTE
-        Sr.Admin und höher
-        =========================================
     */
 
     if (
@@ -455,26 +491,8 @@ function getRequiredAuxiliaryRoles(
     }
 
     /*
-        =========================================
         ADMIN EBENE
-        NUR:
-
-        Head of administration
-        Sr.Admin
-        Admin
-        Jr.Admin
-        Test admin
-
-        Also Index 22 bis 26.
-
-        NICHT:
-        Founder
-        Developer
-        Owner
-        Teamleitung
-        Fraktions verwaltung
-        usw.
-        =========================================
+        Index 22 - 26
     */
 
     if (
@@ -487,18 +505,8 @@ function getRequiredAuxiliaryRoles(
     }
 
     /*
-        =========================================
         MODERATOR EBENE
-        NUR:
-
-        Head of moderation
-        Sr. Moderator
-        Moderator
-        Jr.Moderator
-        Test moderator
-
-        Also Index 27 bis 31.
-        =========================================
+        Index 27 - 31
     */
 
     if (
@@ -511,17 +519,8 @@ function getRequiredAuxiliaryRoles(
     }
 
     /*
-        =========================================
         SUPPORTER EBENE
-        NUR:
-
-        Head of support
-        Supporter
-        Jr. Supporter
-        Test Supporter
-
-        Also Index 32 bis 35.
-        =========================================
+        Index 32 - 35
     */
 
     if (
@@ -536,12 +535,6 @@ function getRequiredAuxiliaryRoles(
     return roles;
 }
 
-/*
-    Alle Nebenrollen entfernen.
-
-    NUR für BESTANDEN verwenden.
-*/
-
 async function removeAuxiliaryRoles(
     member
 ) {
@@ -553,6 +546,8 @@ async function removeAuxiliaryRoles(
     const removable =
         roleIds.filter(
             roleId =>
+                roleId !==
+                config.AUXILIARY_ROLES.SERVER_TEAM &&
                 member.roles.cache.has(
                     roleId
                 )
@@ -566,13 +561,6 @@ async function removeAuxiliaryRoles(
         );
     }
 }
-
-/*
-    Benötigte Ebenen hinzufügen.
-
-    Bestehende Ebenen werden NICHT
-    automatisch entfernt.
-*/
 
 async function addRequiredAuxiliaryRoles(
     member,
@@ -602,13 +590,70 @@ async function addRequiredAuxiliaryRoles(
 }
 
 /*
+    UPRANK
+
+    Kumulative Ebenen bleiben erhalten.
+
+    Die drei Abteilungsebenen werden
+    nur dann entfernt, wenn sie für
+    den neuen Rang nicht mehr passen.
+
+    SERVER TEAM bleibt immer.
+*/
+
+async function updateAuxiliaryRolesAfterUprank(
+    member,
+    rankIndex
+) {
+    const requiredRoles =
+        getRequiredAuxiliaryRoles(
+            rankIndex
+        );
+
+    const departmentRoles = [
+        config.AUXILIARY_ROLES.ADMIN_EBENE,
+        config.AUXILIARY_ROLES.MODERATOR_EBENE,
+        config.AUXILIARY_ROLES.SUPPORTER_EBENE
+    ];
+
+    for (
+        const roleId of
+        departmentRoles
+    ) {
+        if (
+            member.roles.cache.has(
+                roleId
+            ) &&
+            !requiredRoles.includes(
+                roleId
+            )
+        ) {
+            await member.roles.remove(
+                roleId
+            );
+        }
+    }
+
+    for (
+        const roleId of
+        requiredRoles
+    ) {
+        if (
+            !member.roles.cache.has(
+                roleId
+            )
+        ) {
+            await member.roles.add(
+                roleId
+            );
+        }
+    }
+
+    return requiredRoles;
+}
+
+/*
     DOWNRANK
-
-    Hier werden nur Ebenen entfernt,
-    die für den neuen Rang nicht mehr
-    erlaubt sind.
-
-    Server Team wird NIEMALS entfernt.
 */
 
 async function updateAuxiliaryRolesAfterDownrank(
@@ -629,21 +674,12 @@ async function updateAuxiliaryRolesAfterDownrank(
         const roleId of
         auxiliaryRoles
     ) {
-        /*
-            SERVER TEAM IMMER BEHALTEN
-        */
-
         if (
             roleId ===
             config.AUXILIARY_ROLES.SERVER_TEAM
         ) {
             continue;
         }
-
-        /*
-            Nur Nebenrollen anfassen,
-            die nicht mehr benötigt werden.
-        */
 
         if (
             member.roles.cache.has(
@@ -658,10 +694,6 @@ async function updateAuxiliaryRolesAfterDownrank(
             );
         }
     }
-
-    /*
-        Benötigte Rollen hinzufügen
-    */
 
     for (
         const roleId of
@@ -714,18 +746,10 @@ const KEEP_ON_TEAMKICK = [
     config.BÜRGER,
     config.TEAMKICK,
 
-    /*
-        Pingrollen
-    */
-
     "1555631609284395013",
     "1555631609284395014",
     "1555631609284395015",
     "1555631609284395016",
-
-    /*
-        Altersrollen
-    */
 
     "1556241121997230161",
     "1556241180474343475",
@@ -839,6 +863,106 @@ function createActionEmbed({
 }
 
 /* =========================================================
+   RP EMBEDS
+========================================================= */
+
+function createRPStartEmbed(
+    serverCode
+) {
+    const description =
+        `# 🎃 EVIL RP | ROLEPLAY\n\n` +
+
+        `🟢 **ROLEPLAY ERÖFFNET**\n\n` +
+
+        `Das Roleplay auf **Evil RP** wurde offiziell gestartet!\n\n` +
+
+        `🛰️ **Servercode:** \`${serverCode}\`\n\n` +
+
+        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+
+        `> 🔥 **DIE STADT LEBT. DEINE GESCHICHTE BEGINNT.**\n` +
+        `>\n` +
+        `> Ob Staatsfraktion, Unternehmen, Zivilist oder Unterwelt –\n` +
+        `> **du entscheidest, welchen Weg du gehst.**\n` +
+        `>\n` +
+        `> 🎭 Erlebt einzigartiges Roleplay\n` +
+        `> 🤝 Schreibt eure eigene Geschichte\n` +
+        `> ⚠️ Haltet euch an die Serverregeln\n` +
+        `> 🩸 Sorgt für faires und realistisches Roleplay\n\n` +
+
+        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+
+        `**🩸 EVIL RP**\n` +
+        `*Deine Stadt. Deine Entscheidungen. Deine Konsequenzen.*`;
+
+    return new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setDescription(
+            description
+        )
+        .setTimestamp();
+}
+
+function createRPStopEmbed(
+    serverCode
+) {
+    const description =
+        `# 🎃 EVIL RP | ROLEPLAY\n\n` +
+
+        `🔴 **ROLEPLAY BEENDET**\n\n` +
+
+        `Das Roleplay auf **Evil RP** wurde offiziell beendet!\n\n` +
+
+        `🛰️ **Servercode:** \`${serverCode}\`\n\n` +
+
+        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+
+        `> ⚠️ **DIE STADT SCHLIESST IHRE TORE.**\n` +
+        `>\n` +
+        `> Das heutige Roleplay ist beendet.\n` +
+        `> Vielen Dank an alle, die dabei waren und für spannende RP-Situationen gesorgt haben!\n` +
+        `>\n` +
+        `> 🤝 Danke für eure Teilnahme\n` +
+        `> 🎭 Danke für eure RP-Situationen\n` +
+        `> ❤️ Danke für euren Support\n` +
+        `> ⚠️ Bitte beendet laufende RP-Situationen ordnungsgemäß\n\n` +
+
+        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+
+        `**🩸 EVIL RP**\n` +
+        `*Deine Stadt. Deine Entscheidungen. Deine Konsequenzen.*`;
+
+    return new EmbedBuilder()
+        .setColor(0xe74c3c)
+        .setDescription(
+            description
+        )
+        .setTimestamp();
+}
+
+function createServerCodeEmbed(
+    serverCode
+) {
+    const description =
+        `# 🎃 EVIL RP | SERVERCODE\n\n` +
+
+        `🛰️ **AKTUELLER SERVERCODE**\n\n` +
+
+        `🟢 **Servercode:** \`${serverCode}\`\n\n` +
+
+        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+
+        `🩸 **EVIL RP** | *Die Stadt wartet auf dich.*`;
+
+    return new EmbedBuilder()
+        .setColor(0x2b2d31)
+        .setDescription(
+            description
+        )
+        .setTimestamp();
+}
+
+/* =========================================================
    TEAMLISTE KATEGORIE
 ========================================================= */
 
@@ -898,10 +1022,6 @@ async function buildTeamlisteEmbed(
         `║              𝑬𝒗𝒊𝒍 𝑹𝑷                    ║\n` +
         `╚════════════════════════════════════════════╝\n\n`;
 
-    /*
-        DISCORD INHABER
-    */
-
     const inhaberRole =
         guild.roles.cache.get(
             config.DISCORD_INHABER
@@ -937,10 +1057,6 @@ async function buildTeamlisteEmbed(
                 "\n";
         }
     }
-
-    /*
-        TEAMRÄNGE
-    */
 
     for (
         let index = 0;
@@ -982,10 +1098,6 @@ async function buildTeamlisteEmbed(
             members
         });
     }
-
-    /*
-        KATEGORIEN
-    */
 
     for (
         const [
@@ -1098,11 +1210,6 @@ async function updateTeamliste(
                 guild
             );
 
-        /*
-            Nachricht gelöscht?
-            Dann neu erstellen.
-        */
-
         if (!message) {
             const newMessage =
                 await channel.send({
@@ -1141,6 +1248,10 @@ async function updateTeamliste(
 
 const commands = [
 
+    /* =====================================================
+       UPRANK
+    ===================================================== */
+
     new SlashCommandBuilder()
         .setName("uprank")
         .setDescription(
@@ -1164,6 +1275,10 @@ const commands = [
                     )
                     .setRequired(true)
         ),
+
+    /* =====================================================
+       DOWNRANK
+    ===================================================== */
 
     new SlashCommandBuilder()
         .setName("downrank")
@@ -1189,6 +1304,10 @@ const commands = [
                     .setRequired(true)
         ),
 
+    /* =====================================================
+       TEAMWARN
+    ===================================================== */
+
     new SlashCommandBuilder()
         .setName("teamwarn")
         .setDescription(
@@ -1212,6 +1331,10 @@ const commands = [
                     )
                     .setRequired(true)
         ),
+
+    /* =====================================================
+       DELETEWARN
+    ===================================================== */
 
     new SlashCommandBuilder()
         .setName("deletewarn")
@@ -1237,6 +1360,10 @@ const commands = [
                     .setRequired(true)
         ),
 
+    /* =====================================================
+       TEAMKICK
+    ===================================================== */
+
     new SlashCommandBuilder()
         .setName("teamkick")
         .setDescription(
@@ -1260,6 +1387,10 @@ const commands = [
                     )
                     .setRequired(true)
         ),
+
+    /* =====================================================
+       BESTANDEN
+    ===================================================== */
 
     new SlashCommandBuilder()
         .setName("bestanden")
@@ -1293,6 +1424,10 @@ const commands = [
                     )
                     .setRequired(true)
         ),
+
+    /* =====================================================
+       EMBED
+    ===================================================== */
 
     new SlashCommandBuilder()
         .setName("embed")
@@ -1354,10 +1489,81 @@ const commands = [
                     .setRequired(false)
         ),
 
+    /* =====================================================
+       TEAMLISTE
+    ===================================================== */
+
     new SlashCommandBuilder()
         .setName("teamliste")
         .setDescription(
             "Erstellt oder aktualisiert die Teamliste"
+        ),
+
+    /* =====================================================
+       RP
+       /rp start
+       /rp stop
+    ===================================================== */
+
+    new SlashCommandBuilder()
+        .setName("rp")
+        .setDescription(
+            "Startet oder beendet das Roleplay"
+        )
+
+        .addSubcommand(
+            subcommand =>
+                subcommand
+                    .setName("start")
+                    .setDescription(
+                        "Startet das Roleplay"
+                    )
+                    .addRoleOption(
+                        option =>
+                            option
+                                .setName("rolle")
+                                .setDescription(
+                                    "Rolle, die gepingt werden soll"
+                                )
+                                .setRequired(false)
+                    )
+        )
+
+        .addSubcommand(
+            subcommand =>
+                subcommand
+                    .setName("stop")
+                    .setDescription(
+                        "Beendet das Roleplay"
+                    )
+                    .addRoleOption(
+                        option =>
+                            option
+                                .setName("rolle")
+                                .setDescription(
+                                    "Rolle, die gepingt werden soll"
+                                )
+                                .setRequired(false)
+                    )
+        ),
+
+    /* =====================================================
+       SERVERCODE
+    ===================================================== */
+
+    new SlashCommandBuilder()
+        .setName("servercode")
+        .setDescription(
+            "Setzt den aktuellen Servercode"
+        )
+        .addStringOption(
+            option =>
+                option
+                    .setName("code")
+                    .setDescription(
+                        "Der aktuelle Servercode"
+                    )
+                    .setRequired(true)
         )
 
 ].map(
@@ -1496,14 +1702,8 @@ client.on(
         }
 
         /*
-            SEHR WICHTIG:
-
-            Sofort Discord antworten lassen.
-
-            Dadurch kein:
-            "Anwendung reagiert nicht"
-
-            Danach benutzen wir editReply().
+            SOFORT DEFERN
+            verhindert "Anwendung reagiert nicht"
         */
 
         try {
@@ -1584,11 +1784,6 @@ client.on(
                             });
                         }
 
-                        /*
-                            Nachricht gelöscht.
-                            Neue Nachricht.
-                        */
-
                         const newMessage =
                             await channel.send({
                                 embeds: [
@@ -1613,10 +1808,6 @@ client.on(
                         });
                     }
                 }
-
-                /*
-                    Noch keine Teamliste
-                */
 
                 const channel =
                     interaction.channel;
@@ -1664,6 +1855,186 @@ client.on(
                 return interaction.editReply({
                     content:
                         "❌ Du benötigst die Rolle **Teamverwaltung**."
+                });
+            }
+
+            /* =================================================
+               SERVERCODE
+            ================================================= */
+
+            if (
+                interaction.commandName ===
+                "servercode"
+            ) {
+                const code =
+                    interaction.options.getString(
+                        "code"
+                    );
+
+                if (!code) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Bitte gib einen Servercode ein."
+                    });
+                }
+
+                const cleanCode =
+                    code.trim();
+
+                if (
+                    cleanCode.length === 0
+                ) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Der Servercode darf nicht leer sein."
+                    });
+                }
+
+                /*
+                    SERVERCODE SPEICHERN
+                */
+
+                setServerCode(
+                    interaction.guild.id,
+                    cleanCode
+                );
+
+                /*
+                    SERVERCODE EMBED
+                */
+
+                const embed =
+                    createServerCodeEmbed(
+                        cleanCode
+                    );
+
+                await interaction.channel.send({
+                    embeds: [
+                        embed
+                    ]
+                });
+
+                return interaction.editReply({
+                    content:
+                        `✅ Der Servercode \`${cleanCode}\` wurde gespeichert und gesendet.`
+                });
+            }
+
+            /* =================================================
+               RP
+            ================================================= */
+
+            if (
+                interaction.commandName ===
+                "rp"
+            ) {
+                const subcommand =
+                    interaction.options.getSubcommand();
+
+                const serverCode =
+                    getServerCode(
+                        interaction.guild.id
+                    );
+
+                /*
+                    OHNE SERVERCODE KEIN RP START
+                */
+
+                if (
+                    !serverCode
+                ) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Es wurde noch kein Servercode gespeichert.\nNutze zuerst **/servercode**."
+                    });
+                }
+
+                const role =
+                    interaction.options.getRole(
+                        "rolle"
+                    );
+
+                let content =
+                    "";
+
+                if (role) {
+                    content =
+                        `${role}`;
+                }
+
+                /*
+                    RP START
+                */
+
+                if (
+                    subcommand ===
+                    "start"
+                ) {
+                    const embed =
+                        createRPStartEmbed(
+                            serverCode
+                        );
+
+                    await interaction.channel.send({
+                        content:
+                            content || undefined,
+                        embeds: [
+                            embed
+                        ],
+                        allowedMentions: {
+                            roles:
+                                role
+                                    ? [role.id]
+                                    : []
+                        }
+                    });
+
+                    return interaction.editReply({
+                        content:
+                            role
+                                ? `✅ Roleplay wurde gestartet und ${role} wurde gepingt.`
+                                : "✅ Roleplay wurde gestartet."
+                    });
+                }
+
+                /*
+                    RP STOP
+                */
+
+                if (
+                    subcommand ===
+                    "stop"
+                ) {
+                    const embed =
+                        createRPStopEmbed(
+                            serverCode
+                        );
+
+                    await interaction.channel.send({
+                        content:
+                            content || undefined,
+                        embeds: [
+                            embed
+                        ],
+                        allowedMentions: {
+                            roles:
+                                role
+                                    ? [role.id]
+                                    : []
+                        }
+                    });
+
+                    return interaction.editReply({
+                        content:
+                            role
+                                ? `🔴 Roleplay wurde beendet und ${role} wurde gepingt.`
+                                : "🔴 Roleplay wurde beendet."
+                    });
+                }
+
+                return interaction.editReply({
+                    content:
+                        "❌ Unbekannter RP-Befehl."
                 });
             }
 
@@ -1862,32 +2233,20 @@ client.on(
                         newIndex
                     ];
 
-                /*
-                    ALTE HAUPTROLLE ENTFERNEN
-                */
-
                 await target.roles.remove(
                     oldRank.id
                 );
-
-                /*
-                    NEUE HAUPTROLLE
-                */
 
                 await target.roles.add(
                     newRank.id
                 );
 
                 /*
-                    PASSENDE EBENEN HINZUFÜGEN
-
-                    Wichtig:
-                    Es werden KEINE alten
-                    Ebenen blind gelöscht.
+                    NEUE EBENEN AKTUALISIEREN
                 */
 
                 const requiredRoles =
-                    await addRequiredAuxiliaryRoles(
+                    await updateAuxiliaryRolesAfterUprank(
                         target,
                         newIndex
                     );
@@ -1976,39 +2335,13 @@ client.on(
                         newIndex
                     ];
 
-                /*
-                    ALTE HAUPTROLLE
-                */
-
                 await target.roles.remove(
                     oldRank.id
                 );
 
-                /*
-                    NEUE HAUPTROLLE
-                */
-
                 await target.roles.add(
                     newRank.id
                 );
-
-                /*
-                    EBENEN AKTUALISIEREN
-
-                    Admin Ebene:
-                    NUR Test admin bis
-                    Head of administration.
-
-                    Mod Ebene:
-                    NUR Test moderator bis
-                    Head of moderation.
-
-                    Supporter Ebene:
-                    NUR Test Supporter bis
-                    Head of support.
-
-                    Server Team bleibt.
-                */
 
                 const requiredRoles =
                     await updateAuxiliaryRolesAfterDownrank(
@@ -2074,10 +2407,6 @@ client.on(
                 const newWarn =
                     currentWarn + 1;
 
-                /*
-                    Alte Warnrolle entfernen
-                */
-
                 if (
                     currentWarn > 0
                 ) {
@@ -2092,10 +2421,6 @@ client.on(
                         );
                     }
                 }
-
-                /*
-                    3/3
-                */
 
                 if (
                     newWarn >= 3
@@ -2142,10 +2467,6 @@ client.on(
 
                     return;
                 }
-
-                /*
-                    Neue Warnrolle
-                */
 
                 const newWarnRole =
                     config.TEAMWARNS[
@@ -2328,10 +2649,6 @@ client.on(
                     });
                 }
 
-                /*
-                    RANG VERGABE PRÜFEN
-                */
-
                 if (
                     !isDiscordInhaber(
                         executor
@@ -2362,10 +2679,6 @@ client.on(
                     }
                 }
 
-                /*
-                    ALTE HAUPTRÄNGE ENTFERNEN
-                */
-
                 const oldRanks =
                     config.TEAM_RANKS
                         .map(
@@ -2387,17 +2700,9 @@ client.on(
                     );
                 }
 
-                /*
-                    ALTE EBENEN RESETTEN
-                */
-
                 await removeAuxiliaryRoles(
                     target
                 );
-
-                /*
-                    BÜRGER
-                */
 
                 if (
                     !target.roles.cache.has(
@@ -2409,18 +2714,9 @@ client.on(
                     );
                 }
 
-                /*
-                    NEUE HAUPTROLLE
-                */
-
                 await target.roles.add(
                     selectedRole.id
                 );
-
-                /*
-                    NUR EBENEN, DIE DER RANG
-                    WIRKLICH BEKOMMEN DARF
-                */
 
                 const requiredRoles =
                     await addRequiredAuxiliaryRoles(
@@ -2429,7 +2725,8 @@ client.on(
                     );
 
                 /*
-                    SERVER TEAM IMMER ZULETZT
+                    SERVER TEAM IMMER BEHALTEN
+                    / HINZUFÜGEN
                 */
 
                 await target.roles.add(
