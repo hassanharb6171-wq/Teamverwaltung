@@ -311,47 +311,7 @@ function getNametagRole(member) {
 
     return roles.first();
 }
-    /*
-        HÖCHSTER TEAMRANG
-    */
-
-    for (
-        const rank of
-        config.TEAM_RANKS
-    ) {
-        if (
-            member.roles.cache.has(
-                rank.id
-            ) &&
-            !excluded.has(
-                rank.id
-            )
-        ) {
-            return member.guild.roles.cache.get(
-                rank.id
-            );
-        }
-    }
-
-    /*
-        BÜRGER
-    */
-
-    if (
-        member.roles.cache.has(
-            config.BÜRGER
-        ) &&
-        !excluded.has(
-            config.BÜRGER
-        )
-    ) {
-        return member.guild.roles.cache.get(
-            config.BÜRGER
-        );
-    }
-
-    return null;
-}
+    
 
 async function updateNametag(member) {
     try {
