@@ -295,26 +295,22 @@ function getNametagRole(member) {
             config.NO_NAMETAG_ROLES || []
         );
 
-    /*
-        PARTNER
-    */
-
-    const partnerRole =
-        member.guild.roles.cache.find(
-            role =>
-                role.name.toLowerCase() ===
-                "partner"
+    const roles = member.roles.cache
+        .filter(role =>
+            role.id !== member.guild.id &&
+            !excluded.has(role.id)
+        )
+        .sort(
+            (a, b) =>
+                b.position - a.position
         );
 
-    if (
-        partnerRole &&
-        member.roles.cache.has(
-            partnerRole.id
-        )
-    ) {
-        return partnerRole;
+    if (roles.size === 0) {
+        return null;
     }
 
+    return roles.first();
+}
     /*
         HÖCHSTER TEAMRANG
     */
