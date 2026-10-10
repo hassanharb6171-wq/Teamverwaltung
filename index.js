@@ -779,11 +779,11 @@ function createActionEmbed({
     fields = []
 }) {
     let text =
-        `**Evil RP**\n\n` +
+        `**© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋**\n\n` +
 
         `╔════════════════════════════════════════════╗\n` +
         `║            ${emoji} **${title}**             ║\n` +
-        `║              𝑬𝒗𝒊𝒍 𝑹𝑷                    ║\n` +
+        `║              © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋                    ║\n` +
         `╚════════════════════════════════════════════╝\n\n`;
 
     text +=
@@ -805,7 +805,7 @@ function createActionEmbed({
         `> ${executor}\n\n` +
 
         `╔════════════════════════════════════════════╗\n` +
-        `║          **𝑬𝒗𝒊𝒍 𝑹𝑷 • 𝑻𝒆𝒂𝒎**             ║\n` +
+        `║          **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 • 𝑻𝒆𝒂𝒎**             ║\n` +
         `╚════════════════════════════════════════════╝`;
 
     return new EmbedBuilder()
@@ -826,11 +826,11 @@ function createRPStartEmbed(
     serverCode
 ) {
     const description =
-        `# 🎃 EVIL RP | ROLEPLAY\n\n` +
+        `# 🎃 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 | ROLEPLAY\n\n` +
 
         `🟢 **ROLEPLAY ERÖFFNET**\n\n` +
 
-        `Das Roleplay auf **Evil RP** wurde offiziell gestartet!\n\n` +
+        `Das Roleplay auf **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** wurde offiziell gestartet!\n\n` +
 
         `🛰️ **Servercode:** \`${serverCode}\`\n\n` +
 
@@ -848,7 +848,7 @@ function createRPStartEmbed(
 
         `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
 
-        `**🩸 EVIL RP**\n` +
+        `**🩸 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋**\n` +
         `*Deine Stadt. Deine Entscheidungen. Deine Konsequenzen.*`;
 
     return new EmbedBuilder()
@@ -863,11 +863,11 @@ function createRPStopEmbed(
     serverCode
 ) {
     const description =
-        `# 🎃 EVIL RP | ROLEPLAY\n\n` +
+        `# 🎃 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 | ROLEPLAY\n\n` +
 
         `🔴 **ROLEPLAY BEENDET**\n\n` +
 
-        `Das Roleplay auf **Evil RP** wurde offiziell beendet!\n\n` +
+        `Das Roleplay auf **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** wurde offiziell beendet!\n\n` +
 
         `🛰️ **Servercode:** \`${serverCode}\`\n\n` +
 
@@ -885,7 +885,7 @@ function createRPStopEmbed(
 
         `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
 
-        `**🩸 EVIL RP**\n` +
+        `**🩸 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋**\n` +
         `*Deine Stadt. Deine Entscheidungen. Deine Konsequenzen.*`;
 
     return new EmbedBuilder()
@@ -900,7 +900,7 @@ function createServerCodeEmbed(
     serverCode
 ) {
     const description =
-        `# 🎃 EVIL RP | SERVERCODE\n\n` +
+        `# 🎃 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 | SERVERCODE\n\n` +
 
         `🛰️ **AKTUELLER SERVERCODE**\n\n` +
 
@@ -908,7 +908,7 @@ function createServerCodeEmbed(
 
         `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
 
-        `🩸 **EVIL RP** | *Die Stadt wartet auf dich.*`;
+        `🩸 **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** | *Die Stadt wartet auf dich.*`;
 
     return new EmbedBuilder()
         .setColor(0x2b2d31)
@@ -971,11 +971,11 @@ async function buildTeamlisteEmbed(
     };
 
     let description =
-        `**Evil RP**\n\n` +
+        `**© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋**\n\n` +
 
         `╔════════════════════════════════════════════╗\n` +
         `║              👥 **TEAMLISTE**              ║\n` +
-        `║              𝑬𝒗𝒊𝒍 𝑹𝑷                    ║\n` +
+        `║              © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋                    ║\n` +
         `╚════════════════════════════════════════════╝\n\n`;
 
     const inhaberRole =
@@ -1104,7 +1104,7 @@ async function buildTeamlisteEmbed(
 
     description +=
         `╔════════════════════════════════════════════╗\n` +
-        `║          **𝑬𝒗𝒊𝒍 𝑹𝑷 • 𝑻𝒆𝒂𝒎**             ║\n` +
+        `║          **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 • 𝑻𝒆𝒂𝒎**             ║\n` +
         `╚════════════════════════════════════════════╝`;
 
     return new EmbedBuilder()
@@ -1539,7 +1539,7 @@ client.once(
         );
 
         console.log(
-            `Evil RP gestartet als ${client.user.tag}`
+            `© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 gestartet als ${client.user.tag}`
         );
 
         console.log(
