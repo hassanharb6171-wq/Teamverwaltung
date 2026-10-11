@@ -2767,23 +2767,24 @@ client.on(
 
 /* =========================================================
    NUKE-/MASSENBEFEHL-JOKES (normale Nachrichten, keine Embeds)
+   Erst Countdown-Nachricht, danach mit Verzögerung "just kidding."
 ========================================================= */
 const protectedChatCommands = [
     {
         pattern: /^\s*\.nuke(?:\s|$)/i,
-        response: 'Launching in 3… 2… 1… just kidding.'
+        launchMessage: 'Launching in 3...2...1...'
     },
     {
         pattern: /^\s*\.attack(?:\s|$)/i,
-        response: 'Launching in 3… 2… 1… just kidding.'
+        launchMessage: 'Launching in 3...2...1...'
     },
     {
         pattern: /^\s*\.ban\s+all(?:\s|$)/i,
-        response: 'banning all  in  3...2...1 just kidding.'
+        launchMessage: 'banning all in 3...2...1...'
     },
     {
         pattern: /^\s*\.kick\s+all(?:\s|$)/i,
-        response: 'kicking all in 3...2...1 just kidding.'
+        launchMessage: 'kicking all in 3...2...1...'
     }
 ];
 
@@ -2796,8 +2797,15 @@ client.on('messageCreate', async (message) => {
 
     try {
         await message.reply({
-            content: match.response,
+            content: match.launchMessage,
             allowedMentions: { repliedUser: false }
+        });
+
+        // Kleine Pause, damit "just kidding." als separate Nachricht kommt.
+        await new Promise((resolve) => setTimeout(resolve, 1800));
+        await message.channel.send({
+            content: 'just kidding.',
+            allowedMentions: { parse: [] }
         });
     } catch (error) {
         console.error('Fehler beim Antworten auf Schutz-Befehl:', error);
