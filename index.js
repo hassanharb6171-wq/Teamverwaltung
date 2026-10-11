@@ -17,9 +17,7 @@ const config = require("./config");
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.GuildMembers
     ],
     partials: [
         Partials.GuildMember
@@ -38,11 +36,6 @@ const TEAMLIST_FILE = path.join(
     "teamliste.json"
 );
 
-const SERVERCODE_FILE = path.join(
-    DATA_DIR,
-    "servercode.json"
-);
-
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, {
         recursive: true
@@ -59,13 +52,6 @@ if (!fs.existsSync(WARN_FILE)) {
 if (!fs.existsSync(TEAMLIST_FILE)) {
     fs.writeFileSync(
         TEAMLIST_FILE,
-        "{}"
-    );
-}
-
-if (!fs.existsSync(SERVERCODE_FILE)) {
-    fs.writeFileSync(
-        SERVERCODE_FILE,
         "{}"
     );
 }
@@ -98,6 +84,62 @@ function saveWarns(data) {
     );
 }
 
+function normalizeWarnData(data) {
+    // Migration from the old numeric warn count format.
+    const normalized = {};
+    for (const [userId, value] of Object.entries(data || {})) {
+        if (Array.isArray(value)) {
+            normalized[userId] = value.filter(w => w && Number.isFinite(w.expiresAt));
+        } else if (Number.isInteger(value) && value > 0) {
+            // Legacy warnings are given a 30-day grace period after upgrading.
+            normalized[userId] = Array.from({ length: Math.min(value, 3) }, (_, i) => ({
+                id: `legacy-${i + 1}`, level: i + 1, createdAt: Date.now(),
+                expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+                reason: "Bestehende Teamwarn (migriert)", executorId: null
+            }));
+        }
+    }
+    return normalized;
+}
+
+function getActiveWarns(userId) {
+    const warns = normalizeWarnData(loadWarns());
+    return (warns[userId] || []).sort((a, b) => a.createdAt - b.createdAt);
+}
+
+async function syncWarnRole(member, activeWarns) {
+    for (const roleId of Object.values(config.TEAMWARNS || {})) {
+        if (roleId && member.roles.cache.has(roleId)) await member.roles.remove(roleId).catch(() => {});
+    }
+    const level = Math.min(activeWarns.length, 3);
+    if (level > 0 && config.TEAMWARNS[level] && !member.roles.cache.has(config.TEAMWARNS[level])) {
+        await member.roles.add(config.TEAMWARNS[level]);
+    }
+}
+
+async function expireTeamwarns() {
+    const data = normalizeWarnData(loadWarns());
+    const now = Date.now();
+    let changed = false;
+    for (const [userId, entries] of Object.entries(data)) {
+        const remaining = entries.filter(w => w.expiresAt > now);
+        if (remaining.length !== entries.length) {
+            changed = true;
+            if (remaining.length) data[userId] = remaining; else delete data[userId];
+            try {
+                const guild = client.guilds.cache.get(config.GUILD_ID);
+                const member = guild && await guild.members.fetch(userId).catch(() => null);
+                if (member) {
+                    await syncWarnRole(member, remaining);
+                    const channel = guild.channels.cache.find(c => c.isTextBased() && c.name === "team-logs");
+                    if (channel) await channel.send(`⌛ Teamwarn von ${member} ist abgelaufen. Aktive Warnungen: ${remaining.length}/3.`).catch(() => {});
+                }
+            } catch (error) { console.error("Teamwarn-Ablauf Fehler:", error.message); }
+        }
+    }
+    if (changed) saveWarns(data);
+}
+
 function loadTeamliste() {
     try {
         return JSON.parse(
@@ -119,55 +161,6 @@ function saveTeamliste(data) {
             null,
             2
         )
-    );
-}
-
-/* =========================================================
-   SERVERCODE
-========================================================= */
-
-function loadServerCodes() {
-    try {
-        return JSON.parse(
-            fs.readFileSync(
-                SERVERCODE_FILE,
-                "utf8"
-            )
-        );
-    } catch {
-        return {};
-    }
-}
-
-function saveServerCodes(data) {
-    fs.writeFileSync(
-        SERVERCODE_FILE,
-        JSON.stringify(
-            data,
-            null,
-            2
-        )
-    );
-}
-
-function getServerCode(guildId) {
-    const data =
-        loadServerCodes();
-
-    return data[guildId] || null;
-}
-
-function setServerCode(
-    guildId,
-    code
-) {
-    const data =
-        loadServerCodes();
-
-    data[guildId] = code;
-
-    saveServerCodes(
-        data
     );
 }
 
@@ -703,15 +696,8 @@ function getAuxiliaryNames(
 const KEEP_ON_TEAMKICK = [
     config.BÜRGER,
     config.TEAMKICK,
-
-    "1555631609284395013",
-    "1555631609284395014",
-    "1555631609284395015",
-    "1555631609284395016",
-
-    "1556241121997230161",
-    "1556241180474343475",
-    "1556241220265574400"
+    config.TEAM_SPERRE,
+    ...config.PERMANENT_ON_TEAMKICK
 ];
 
 async function performTeamkick(
@@ -748,6 +734,20 @@ async function performTeamkick(
         );
     }
 
+    if (
+        config.BÜRGER &&
+        !member.roles.cache.has(config.BÜRGER)
+    ) {
+        await member.roles.add(config.BÜRGER);
+    }
+
+    if (
+        config.TEAM_SPERRE &&
+        !member.roles.cache.has(config.TEAM_SPERRE)
+    ) {
+        await member.roles.add(config.TEAM_SPERRE);
+    }
+
     const warns =
         loadWarns();
 
@@ -781,11 +781,11 @@ function createActionEmbed({
     fields = []
 }) {
     let text =
-        `**© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋**\n\n` +
+        `**Ⓒ 𝐁𝐫𝐞𝐦𝐞𝐧 𝐑𝐩 𝐕𝟏**\n\n` +
 
         `╔════════════════════════════════════════════╗\n` +
         `║            ${emoji} **${title}**             ║\n` +
-        `║              © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋                    ║\n` +
+        `║              Ⓒ 𝐁𝐫𝐞𝐦𝐞𝐧 𝐑𝐩 𝐕𝟏                    ║\n` +
         `╚════════════════════════════════════════════╝\n\n`;
 
     text +=
@@ -807,7 +807,7 @@ function createActionEmbed({
         `> ${executor}\n\n` +
 
         `╔════════════════════════════════════════════╗\n` +
-        `║          **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 • 𝑻𝒆𝒂𝒎**             ║\n` +
+        `║          **Ⓒ 𝐁𝐫𝐞𝐦𝐞𝐧 𝐑𝐩 𝐕𝟏 • 𝑻𝒆𝒂𝒎**             ║\n` +
         `╚════════════════════════════════════════════╝`;
 
     return new EmbedBuilder()
@@ -816,106 +816,6 @@ function createActionEmbed({
         )
         .setDescription(
             text
-        )
-        .setTimestamp();
-}
-
-/* =========================================================
-   RP EMBEDS
-========================================================= */
-
-function createRPStartEmbed(
-    serverCode
-) {
-    const description =
-        `# 🎃 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 | ROLEPLAY\n\n` +
-
-        `🟢 **ROLEPLAY ERÖFFNET**\n\n` +
-
-        `Das Roleplay auf **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** wurde offiziell gestartet!\n\n` +
-
-        `🛰️ **Servercode:** \`${serverCode}\`\n\n` +
-
-        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-
-        `> 🔥 **DIE STADT LEBT. DEINE GESCHICHTE BEGINNT.**\n` +
-        `>\n` +
-        `> Ob Staatsfraktion, Unternehmen, Zivilist oder Unterwelt –\n` +
-        `> **du entscheidest, welchen Weg du gehst.**\n` +
-        `>\n` +
-        `> 🎭 Erlebt einzigartiges Roleplay\n` +
-        `> 🤝 Schreibt eure eigene Geschichte\n` +
-        `> ⚠️ Haltet euch an die Serverregeln\n` +
-        `> 🩸 Sorgt für faires und realistisches Roleplay\n\n` +
-
-        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-
-        `**🩸 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋**\n` +
-        `*Deine Stadt. Deine Entscheidungen. Deine Konsequenzen.*`;
-
-    return new EmbedBuilder()
-        .setColor(0x2ecc71)
-        .setDescription(
-            description
-        )
-        .setTimestamp();
-}
-
-function createRPStopEmbed(
-    serverCode
-) {
-    const description =
-        `# 🎃 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 | ROLEPLAY\n\n` +
-
-        `🔴 **ROLEPLAY BEENDET**\n\n` +
-
-        `Das Roleplay auf **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** wurde offiziell beendet!\n\n` +
-
-        `🛰️ **Servercode:** \`${serverCode}\`\n\n` +
-
-        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-
-        `> ⚠️ **DIE STADT SCHLIESST IHRE TORE.**\n` +
-        `>\n` +
-        `> Das heutige Roleplay ist beendet.\n` +
-        `> Vielen Dank an alle, die dabei waren und für spannende RP-Situationen gesorgt haben!\n` +
-        `>\n` +
-        `> 🤝 Danke für eure Teilnahme\n` +
-        `> 🎭 Danke für eure RP-Situationen\n` +
-        `> ❤️ Danke für euren Support\n` +
-        `> ⚠️ Bitte beendet laufende RP-Situationen ordnungsgemäß\n\n` +
-
-        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-
-        `**🩸 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋**\n` +
-        `*Deine Stadt. Deine Entscheidungen. Deine Konsequenzen.*`;
-
-    return new EmbedBuilder()
-        .setColor(0xe74c3c)
-        .setDescription(
-            description
-        )
-        .setTimestamp();
-}
-
-function createServerCodeEmbed(
-    serverCode
-) {
-    const description =
-        `# 🎃 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 | SERVERCODE\n\n` +
-
-        `🛰️ **AKTUELLER SERVERCODE**\n\n` +
-
-        `🟢 **Servercode:** \`${serverCode}\`\n\n` +
-
-        `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-
-        `🩸 **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** | *Die Stadt wartet auf dich.*`;
-
-    return new EmbedBuilder()
-        .setColor(0x2b2d31)
-        .setDescription(
-            description
         )
         .setTimestamp();
 }
@@ -973,11 +873,11 @@ async function buildTeamlisteEmbed(
     };
 
     let description =
-        `**© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋**\n\n` +
+        `**Ⓒ 𝐁𝐫𝐞𝐦𝐞𝐧 𝐑𝐩 𝐕𝟏**\n\n` +
 
         `╔════════════════════════════════════════════╗\n` +
         `║              👥 **TEAMLISTE**              ║\n` +
-        `║              © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋                    ║\n` +
+        `║              Ⓒ 𝐁𝐫𝐞𝐦𝐞𝐧 𝐑𝐩 𝐕𝟏                    ║\n` +
         `╚════════════════════════════════════════════╝\n\n`;
 
     const inhaberRole =
@@ -1106,7 +1006,7 @@ async function buildTeamlisteEmbed(
 
     description +=
         `╔════════════════════════════════════════════╗\n` +
-        `║          **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 • 𝑻𝒆𝒂𝒎**             ║\n` +
+        `║          **Ⓒ 𝐁𝐫𝐞𝐦𝐞𝐧 𝐑𝐩 𝐕𝟏 • 𝑻𝒆𝒂𝒎**             ║\n` +
         `╚════════════════════════════════════════════╝`;
 
     return new EmbedBuilder()
@@ -1288,6 +1188,15 @@ const commands = [
                         "Grund"
                     )
                     .setRequired(true)
+        )
+        .addIntegerOption(
+            option =>
+                option
+                    .setName("tage")
+                    .setDescription("Dauer der Teamwarnung in Tagen")
+                    .setMinValue(1)
+                    .setMaxValue(365)
+                    .setRequired(true)
         ),
 
     /* =====================================================
@@ -1457,72 +1366,6 @@ const commands = [
             "Erstellt oder aktualisiert die Teamliste"
         ),
 
-    /* =====================================================
-       RP
-       /rp start
-       /rp stop
-    ===================================================== */
-
-    new SlashCommandBuilder()
-        .setName("rp")
-        .setDescription(
-            "Startet oder beendet das Roleplay"
-        )
-
-        .addSubcommand(
-            subcommand =>
-                subcommand
-                    .setName("start")
-                    .setDescription(
-                        "Startet das Roleplay"
-                    )
-                    .addRoleOption(
-                        option =>
-                            option
-                                .setName("rolle")
-                                .setDescription(
-                                    "Rolle, die gepingt werden soll"
-                                )
-                                .setRequired(false)
-                    )
-        )
-
-        .addSubcommand(
-            subcommand =>
-                subcommand
-                    .setName("stop")
-                    .setDescription(
-                        "Beendet das Roleplay"
-                    )
-                    .addRoleOption(
-                        option =>
-                            option
-                                .setName("rolle")
-                                .setDescription(
-                                    "Rolle, die gepingt werden soll"
-                                )
-                                .setRequired(false)
-                    )
-        ),
-
-    /* =====================================================
-       SERVERCODE
-    ===================================================== */
-
-    new SlashCommandBuilder()
-        .setName("servercode")
-        .setDescription(
-            "Setzt den aktuellen Servercode"
-        )
-        .addStringOption(
-            option =>
-                option
-                    .setName("code")
-                    .setDescription(
-                        "Der aktuelle Servercode"
-                    )
-                    .setRequired(true)
-        )
 
 ].map(
     command =>
@@ -1541,7 +1384,7 @@ client.once(
         );
 
         console.log(
-            `© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 gestartet als ${client.user.tag}`
+            `Ⓒ 𝐁𝐫𝐞𝐦𝐞𝐧 𝐑𝐩 𝐕𝟏 gestartet als ${client.user.tag}`
         );
 
         console.log(
@@ -1549,6 +1392,8 @@ client.once(
         );
 
         try {
+            await expireTeamwarns();
+            setInterval(() => expireTeamwarns().catch(err => console.error("Teamwarn-Expiry:", err)), 60 * 60 * 1000);
             const rest =
                 new REST({
                     version: "10"
@@ -1813,186 +1658,6 @@ client.on(
                 return interaction.editReply({
                     content:
                         "❌ Du benötigst die Rolle **Teamverwaltung**."
-                });
-            }
-
-            /* =================================================
-               SERVERCODE
-            ================================================= */
-
-            if (
-                interaction.commandName ===
-                "servercode"
-            ) {
-                const code =
-                    interaction.options.getString(
-                        "code"
-                    );
-
-                if (!code) {
-                    return interaction.editReply({
-                        content:
-                            "❌ Bitte gib einen Servercode ein."
-                    });
-                }
-
-                const cleanCode =
-                    code.trim();
-
-                if (
-                    cleanCode.length === 0
-                ) {
-                    return interaction.editReply({
-                        content:
-                            "❌ Der Servercode darf nicht leer sein."
-                    });
-                }
-
-                /*
-                    SERVERCODE SPEICHERN
-                */
-
-                setServerCode(
-                    interaction.guild.id,
-                    cleanCode
-                );
-
-                /*
-                    SERVERCODE EMBED
-                */
-
-                const embed =
-                    createServerCodeEmbed(
-                        cleanCode
-                    );
-
-                await interaction.channel.send({
-                    embeds: [
-                        embed
-                    ]
-                });
-
-                return interaction.editReply({
-                    content:
-                        `✅ Der Servercode \`${cleanCode}\` wurde gespeichert und gesendet.`
-                });
-            }
-
-            /* =================================================
-               RP
-            ================================================= */
-
-            if (
-                interaction.commandName ===
-                "rp"
-            ) {
-                const subcommand =
-                    interaction.options.getSubcommand();
-
-                const serverCode =
-                    getServerCode(
-                        interaction.guild.id
-                    );
-
-                /*
-                    OHNE SERVERCODE KEIN RP START
-                */
-
-                if (
-                    !serverCode
-                ) {
-                    return interaction.editReply({
-                        content:
-                            "❌ Es wurde noch kein Servercode gespeichert.\nNutze zuerst **/servercode**."
-                    });
-                }
-
-                const role =
-                    interaction.options.getRole(
-                        "rolle"
-                    );
-
-                let content =
-                    "";
-
-                if (role) {
-                    content =
-                        `${role}`;
-                }
-
-                /*
-                    RP START
-                */
-
-                if (
-                    subcommand ===
-                    "start"
-                ) {
-                    const embed =
-                        createRPStartEmbed(
-                            serverCode
-                        );
-
-                    await interaction.channel.send({
-                        content:
-                            content || undefined,
-                        embeds: [
-                            embed
-                        ],
-                        allowedMentions: {
-                            roles:
-                                role
-                                    ? [role.id]
-                                    : []
-                        }
-                    });
-
-                    return interaction.editReply({
-                        content:
-                            role
-                                ? `✅ Roleplay wurde gestartet und ${role} wurde gepingt.`
-                                : "✅ Roleplay wurde gestartet."
-                    });
-                }
-
-                /*
-                    RP STOP
-                */
-
-                if (
-                    subcommand ===
-                    "stop"
-                ) {
-                    const embed =
-                        createRPStopEmbed(
-                            serverCode
-                        );
-
-                    await interaction.channel.send({
-                        content:
-                            content || undefined,
-                        embeds: [
-                            embed
-                        ],
-                        allowedMentions: {
-                            roles:
-                                role
-                                    ? [role.id]
-                                    : []
-                        }
-                    });
-
-                    return interaction.editReply({
-                        content:
-                            role
-                                ? `🔴 Roleplay wurde beendet und ${role} wurde gepingt.`
-                                : "🔴 Roleplay wurde beendet."
-                    });
-                }
-
-                return interaction.editReply({
-                    content:
-                        "❌ Unbekannter RP-Befehl."
                 });
             }
 
@@ -2350,204 +2015,61 @@ client.on(
                TEAMWARN
             ================================================= */
 
-            if (
-                interaction.commandName ===
-                "teamwarn"
-            ) {
-                const warns =
-                    loadWarns();
+            if (interaction.commandName === "teamwarn") {
+                const data = normalizeWarnData(loadWarns());
+                const active = (data[target.id] || []).filter(w => w.expiresAt > Date.now());
+                const days = interaction.options.getInteger("tage", true);
+                const now = Date.now();
+                const newEntry = {
+                    id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+                    level: Math.min(active.length + 1, 3),
+                    createdAt: now, expiresAt: now + days * 24 * 60 * 60 * 1000,
+                    reason, executorId: executor.id
+                };
+                active.push(newEntry);
+                data[target.id] = active;
+                saveWarns(data);
+                await syncWarnRole(target, active);
 
-                const currentWarn =
-                    warns[
-                        target.id
-                    ] || 0;
-
-                const newWarn =
-                    currentWarn + 1;
-
-                if (
-                    currentWarn > 0
-                ) {
-                    const oldWarnRole =
-                        config.TEAMWARNS[
-                            currentWarn
-                        ];
-
-                    if (oldWarnRole) {
-                        await target.roles.remove(
-                            oldWarnRole
-                        );
-                    }
-                }
-
-                if (
-                    newWarn >= 3
-                ) {
-                    const warn3Role =
-                        config.TEAMWARNS[3];
-
-                    if (warn3Role) {
-                        await target.roles.add(
-                            warn3Role
-                        );
-                    }
-
-                    warns[
-                        target.id
-                    ] = 3;
-
-                    saveWarns(
-                        warns
-                    );
-
-                    const embed =
-                        createActionEmbed({
-                            emoji: "⚠️",
-                            title: "TEAMWARNUNG",
-                            member: target,
-                            reason,
-                            executor,
-                            fields: [
-                                `**⚠️ Verwarnungsstufe**\n> Teamwarn 3/3`,
-                                `**🚫 Folge**\n> Automatischer Teamkick`
-                            ]
-                        });
-
-                    await interaction.editReply({
-                        embeds: [
-                            embed
-                        ]
-                    });
-
-                    await performTeamkick(
-                        target
-                    );
-
+                const expiry = Math.floor(newEntry.expiresAt / 1000);
+                const fields = [
+                    `**⚠️ Verwarnungsstufe**\n> Teamwarn ${Math.min(active.length, 3)}/3`,
+                    `**⏳ Dauer**\n> ${days} Tag${days === 1 ? "" : "e"}`,
+                    `**📅 Läuft ab**\n> <t:${expiry}:F> (<t:${expiry}:R>)`
+                ];
+                if (active.length >= 3) {
+                    fields.push("**🚫 Folge**\n> Automatischer Teamkick");
+                    const embed = createActionEmbed({ emoji: "⚠️", title: "TEAMWARNUNG", member: target, reason, executor, fields });
+                    await interaction.editReply({ embeds: [embed] });
+                    await performTeamkick(target);
                     return;
                 }
-
-                const newWarnRole =
-                    config.TEAMWARNS[
-                        newWarn
-                    ];
-
-                if (newWarnRole) {
-                    await target.roles.add(
-                        newWarnRole
-                    );
-                }
-
-                warns[
-                    target.id
-                ] = newWarn;
-
-                saveWarns(
-                    warns
-                );
-
-                const embed =
-                    createActionEmbed({
-                        emoji: "⚠️",
-                        title: "TEAMWARNUNG",
-                        member: target,
-                        reason,
-                        executor,
-                        fields: [
-                            `**⚠️ Verwarnungsstufe**\n> Teamwarn ${newWarn}/3`
-                        ]
-                    });
-
-                return interaction.editReply({
-                    embeds: [
-                        embed
-                    ]
-                });
+                const embed = createActionEmbed({ emoji: "⚠️", title: "TEAMWARNUNG", member: target, reason, executor, fields });
+                return interaction.editReply({ embeds: [embed] });
             }
 
             /* =================================================
                DELETEWARN
             ================================================= */
 
-            if (
-                interaction.commandName ===
-                "deletewarn"
-            ) {
-                const warns =
-                    loadWarns();
-
-                const currentWarn =
-                    warns[
-                        target.id
-                    ] || 0;
-
-                if (
-                    currentWarn <= 0
-                ) {
-                    return interaction.editReply({
-                        content:
-                            "❌ Dieses Teammitglied hat aktuell keine Teamwarnung."
-                    });
+            if (interaction.commandName === "deletewarn") {
+                const data = normalizeWarnData(loadWarns());
+                const active = (data[target.id] || []).filter(w => w.expiresAt > Date.now());
+                if (!active.length) {
+                    return interaction.editReply({ content: "❌ Dieses Teammitglied hat aktuell keine Teamwarnung." });
                 }
-
-                const currentWarnRole =
-                    config.TEAMWARNS[
-                        currentWarn
-                    ];
-
-                if (currentWarnRole) {
-                    await target.roles.remove(
-                        currentWarnRole
-                    );
-                }
-
-                const newWarn =
-                    currentWarn - 1;
-
-                if (
-                    newWarn > 0
-                ) {
-                    const newWarnRole =
-                        config.TEAMWARNS[
-                            newWarn
-                        ];
-
-                    if (newWarnRole) {
-                        await target.roles.add(
-                            newWarnRole
-                        );
-                    }
-
-                    warns[
-                        target.id
-                    ] = newWarn;
-                } else {
-                    delete warns[
-                        target.id
-                    ];
-                }
-
-                saveWarns(
-                    warns
-                );
-
-                const embed =
-                    createActionEmbed({
-                        emoji: "🗑️",
-                        title: "DELETEWARN",
-                        member: target,
-                        reason,
-                        executor,
-                        fields: [
-                            `**⚠️ Alte Verwarnungsstufe**\n> Teamwarn ${currentWarn}/3`,
-                            `**✅ Neue Verwarnungsstufe**\n> ${newWarn}/3`
-                        ]
-                    });
-
-                return interaction.editReply({
-                    embeds: [
-                        embed
+                const removed = active.pop();
+                if (active.length) data[target.id] = active; else delete data[target.id];
+                saveWarns(data);
+                await syncWarnRole(target, active);
+                const embed = createActionEmbed({
+                    emoji: "🗑️", title: "DELETEWARN", member: target, reason, executor,
+                    fields: [
+                        `**⚠️ Entfernte Verwarnung**\n> Warnung vom <t:${Math.floor(removed.createdAt / 1000)}:d>`,
+                        `**✅ Verbleibende Verwarnungen**\n> ${active.length}/3`
                     ]
                 });
+                return interaction.editReply({ embeds: [embed] });
             }
 
             /* =================================================
@@ -2764,53 +2286,6 @@ client.on(
         }
     }
 );
-
-/* =========================================================
-   NUKE-/MASSENBEFEHL-JOKES (normale Nachrichten, keine Embeds)
-   Erst Countdown-Nachricht, danach mit Verzögerung "just kidding."
-========================================================= */
-const protectedChatCommands = [
-    {
-        pattern: /^\s*\.nuke(?:\s|$)/i,
-        launchMessage: 'Launching in 3...2...1...'
-    },
-    {
-        pattern: /^\s*\.attack(?:\s|$)/i,
-        launchMessage: 'Launching in 3...2...1...'
-    },
-    {
-        pattern: /^\s*\.ban\s+all(?:\s|$)/i,
-        launchMessage: 'banning all in 3...2...1...'
-    },
-    {
-        pattern: /^\s*\.kick\s+all(?:\s|$)/i,
-        launchMessage: 'kicking all in 3...2...1...'
-    }
-];
-
-client.on('messageCreate', async (message) => {
-    if (!message.guild || message.author.bot) return;
-
-    const content = message.content.trim();
-    const match = protectedChatCommands.find(({ pattern }) => pattern.test(content));
-    if (!match) return;
-
-    try {
-        await message.reply({
-            content: match.launchMessage,
-            allowedMentions: { repliedUser: false }
-        });
-
-        // Kleine Pause, damit "just kidding." als separate Nachricht kommt.
-        await new Promise((resolve) => setTimeout(resolve, 1800));
-        await message.channel.send({
-            content: 'just kidding.',
-            allowedMentions: { parse: [] }
-        });
-    } catch (error) {
-        console.error('Fehler beim Antworten auf Schutz-Befehl:', error);
-    }
-});
 
 /* =========================================================
    LOGIN
