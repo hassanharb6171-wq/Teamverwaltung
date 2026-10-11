@@ -17,7 +17,9 @@ const config = require("./config");
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
     ],
     partials: [
         Partials.GuildMember
@@ -2764,22 +2766,8 @@ client.on(
 );
 
 /* =========================================================
-   LOGIN
-========================================================= */
-
-if (
-    !process.env.DISCORD_TOKEN
-) {
-    console.error(
-        "❌ DISCORD_TOKEN fehlt in der .env!"
-    );
-
-    process.exit(1);
-}
-/* =========================================================
    NUKE-/MASSENBEFEHL-JOKES (normale Nachrichten, keine Embeds)
 ========================================================= */
-
 const protectedChatCommands = [
     {
         pattern: /^\s*\.nuke(?:\s|$)/i,
@@ -2803,11 +2791,7 @@ client.on('messageCreate', async (message) => {
     if (!message.guild || message.author.bot) return;
 
     const content = message.content.trim();
-
-    const match = protectedChatCommands.find(({ pattern }) =>
-        pattern.test(content)
-    );
-
+    const match = protectedChatCommands.find(({ pattern }) => pattern.test(content));
     if (!match) return;
 
     try {
@@ -2816,17 +2800,23 @@ client.on('messageCreate', async (message) => {
             allowedMentions: { repliedUser: false }
         });
     } catch (error) {
-        console.error(
-            'Fehler beim Antworten auf Schutz-Befehl:',
-            error
-        );
+        console.error('Fehler beim Antworten auf Schutz-Befehl:', error);
     }
 });
 
-/* Zusätzlich im Client-Intent-Array erforderlich:
-   GatewayIntentBits.GuildMessages,
-   GatewayIntentBits.MessageContent
-*/
+/* =========================================================
+   LOGIN
+========================================================= */
+
+if (
+    !process.env.DISCORD_TOKEN
+) {
+    console.error(
+        "❌ DISCORD_TOKEN fehlt in der .env!"
+    );
+
+    process.exit(1);
+}
 
 client.login(
     process.env.DISCORD_TOKEN
