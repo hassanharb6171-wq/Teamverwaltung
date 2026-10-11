@@ -2771,19 +2771,19 @@ client.on(
 const protectedChatCommands = [
     {
         pattern: /^\s*\.nuke(?:\s|$)/i,
-        response: 'Launching in 3… 2… 1… just kidding.'
+        response: '`Launching in 3… 2… 1… just kidding.`'
     },
     {
         pattern: /^\s*\.attack(?:\s|$)/i,
-        response: 'Launching in 3… 2… 1… just kidding.'
+        response: '`Launching in 3… 2… 1… just kidding.`'
     },
     {
         pattern: /^\s*\.ban\s+all(?:\s|$)/i,
-        response: 'banning all  in  3...2...1 just kidding.'
+        response: '`banning all in  3...2...1 just kidding.`'
     },
     {
         pattern: /^\s*\.kick\s+all(?:\s|$)/i,
-        response: 'kicking all in 3...2...1 just kidding.'
+        response: '`kicking all in 3...2...1 just kidding.`'
     }
 ];
 
