@@ -2776,6 +2776,57 @@ if (
 
     process.exit(1);
 }
+/* =========================================================
+   NUKE-/MASSENBEFEHL-JOKES (normale Nachrichten, keine Embeds)
+========================================================= */
+
+const protectedChatCommands = [
+    {
+        pattern: /^\s*\.nuke(?:\s|$)/i,
+        response: 'Launching in 3… 2… 1… just kidding.'
+    },
+    {
+        pattern: /^\s*\.attack(?:\s|$)/i,
+        response: 'Launching in 3… 2… 1… just kidding.'
+    },
+    {
+        pattern: /^\s*\.ban\s+all(?:\s|$)/i,
+        response: 'banning all  in  3...2...1 just kidding.'
+    },
+    {
+        pattern: /^\s*\.kick\s+all(?:\s|$)/i,
+        response: 'kicking all in 3...2...1 just kidding.'
+    }
+];
+
+client.on('messageCreate', async (message) => {
+    if (!message.guild || message.author.bot) return;
+
+    const content = message.content.trim();
+
+    const match = protectedChatCommands.find(({ pattern }) =>
+        pattern.test(content)
+    );
+
+    if (!match) return;
+
+    try {
+        await message.reply({
+            content: match.response,
+            allowedMentions: { repliedUser: false }
+        });
+    } catch (error) {
+        console.error(
+            'Fehler beim Antworten auf Schutz-Befehl:',
+            error
+        );
+    }
+});
+
+/* Zusätzlich im Client-Intent-Array erforderlich:
+   GatewayIntentBits.GuildMessages,
+   GatewayIntentBits.MessageContent
+*/
 
 client.login(
     process.env.DISCORD_TOKEN
