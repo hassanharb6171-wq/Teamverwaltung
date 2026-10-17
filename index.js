@@ -101,10 +101,9 @@ const commands = [
             .addStringOption(o => o.setName("server").setDescription("Welcher Server soll beendet werden?").setRequired(true)
                 .addChoices({ name: "Server 1", value: "1" }, { name: "Server 2", value: "2" }))),
     new SlashCommandBuilder()
-        .setName("servercode").setDescription("Speichert den Servercode für Server 1 oder Server 2")
-        .addStringOption(o => o.setName("server").setDescription("Für welchen Server ist der Code?").setRequired(true)
-            .addChoices({ name: "Server 1", value: "1" }, { name: "Server 2", value: "2" }))
-        .addStringOption(o => o.setName("code").setDescription("Der Servercode").setRequired(true))
+        .setName("servercode").setDescription("Speichert und zeigt die Servercodes für beide Server")
+        .addStringOption(o => o.setName("server1").setDescription("Servercode für Server 1").setRequired(true))
+        .addStringOption(o => o.setName("server2").setDescription("Servercode für Server 2").setRequired(true))
 ].map(command => command.toJSON());
 
 client.once("ready", async () => {
@@ -144,11 +143,25 @@ client.on("interactionCreate", async interaction => {
         }
 
         if (interaction.commandName === "servercode") {
-            const server = interaction.options.getString("server", true);
-            const code = interaction.options.getString("code", true).trim();
-            if (!code) return interaction.editReply({ content: "❌ Der Servercode darf nicht leer sein." });
-            setServerCode(interaction.guild.id, server, code);
-            return interaction.editReply({ content: `✅ Servercode für **Server ${server}** wurde gespeichert.` });
+            const code1 = interaction.options.getString("server1", true).trim();
+            const code2 = interaction.options.getString("server2", true).trim();
+            if (!code1 || !code2) {
+                return interaction.editReply({ content: "❌ Bitte gib die Servercodes für **beide Server** ein." });
+            }
+            setServerCode(interaction.guild.id, "1", code1);
+            setServerCode(interaction.guild.id, "2", code2);
+            const embed = new EmbedBuilder()
+                .setColor(0x2ecc71)
+                .setDescription(
+                    "# 🎃 © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 RP | SERVERCODE\n\n" +
+                    "🛰️ **AKTUELLE SERVERCODES**\n\n" +
+                    `🟢 **Server 1:** \`${code1}\`\n` +
+                    `🟢 **Server 2:** \`${code2}\`\n` +
+                    "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+                    "🩸 **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 RP** | *Die Stadt wartet auf dich.*"
+                )
+                .setTimestamp();
+            return interaction.editReply({ content: "✅ Beide Servercodes wurden gespeichert.", embeds: [embed] });
         }
 
         if (interaction.commandName === "rp") {
