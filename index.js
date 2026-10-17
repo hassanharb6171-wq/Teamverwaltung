@@ -82,8 +82,28 @@ async function addRequiredAuxiliaryRoles(member, rankIndex) {
 
 function createRPEmbed(server, code, started) {
     const description = started
-        ? `# 🎃 © Niedersachsen RP | ROLEPLAY\n\n🟢 **ROLEPLAY SERVER ${server} ERÖFFNET**\n\nDas Roleplay auf **Server ${server}** wurde offiziell gestartet!\n\n🛰️ **Servercode:** \`${code}\`\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n> 🔥 **DIE STADT LEBT. DEINE GESCHICHTE BEGINNT.**\n> Haltet euch an die Serverregeln und sorgt für faires Roleplay.`
-        : `# 🎃 © Niedersachsen RP | ROLEPLAY\n\n🔴 **ROLEPLAY SERVER ${server} BEENDET**\n\nDas Roleplay auf **Server ${server}** wurde offiziell beendet.\n\n🛰️ **Servercode:** \`${code}\`\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n> ⚠️ **DIE STADT SCHLIESST IHRE TORE.**\n> Danke für eure Teilnahme. Beendet laufende RP-Situationen ordnungsgemäß.`;
+        ? `🎃 **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 | ROLEPLAY**\n\n` +
+          `🟢 **ROLEPLAY ERÖFFNET**\n\n` +
+          `Das Roleplay auf **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** wurde offiziell gestartet!\n\n` +
+          `🛰️ **Servercode:** \`${code}\`\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `> 🔥 **DIE STADT LEBT. DEINE GESCHICHTE BEGINNT.**\n>\n` +
+          `> Ob Staatsfraktion, Unternehmen, Zivilist oder Unterwelt – **du entscheidest, welchen Weg du gehst.**\n>\n` +
+          `> 🎭 Erlebt einzigartiges Roleplay  🤝 Schreibt eure eigene Geschichte\n` +
+          `> ⚠️ Haltet euch an die Serverregeln  🩸 Sorgt für faires und realistisches Roleplay\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `🩸 **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** *Deine Stadt. Deine Entscheidungen. Deine Konsequenzen.*`
+        : `🎃 **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 | ROLEPLAY**\n\n` +
+          `🔴 **ROLEPLAY BEENDET**\n\n` +
+          `Das Roleplay auf **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** wurde offiziell beendet!\n\n` +
+          `🛰️ **Servercode:** \`${code}\`\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `> ⚠️ **DIE STADT SCHLIESST IHRE TORE.**\n>\n` +
+          `> Das heutige Roleplay ist beendet. Vielen Dank an alle, die dabei waren und für spannende RP-Situationen gesorgt haben!\n>\n` +
+          `> 🤝 Danke für eure Teilnahme  🎭 Danke für eure RP-Situationen\n` +
+          `> ❤️ Danke für euren Support  ⚠️ Bitte beendet laufende RP-Situationen ordnungsgemäß\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `🩸 **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋** *Deine Stadt. Deine Entscheidungen. Deine Konsequenzen.*`;
     return new EmbedBuilder().setColor(started ? 0x2ecc71 : 0xe74c3c).setDescription(description).setTimestamp();
 }
 
@@ -95,11 +115,14 @@ const commands = [
         .addStringOption(o => o.setName("grund").setDescription("Grund").setRequired(true)),
     new SlashCommandBuilder()
         .setName("rp").setDescription("Startet oder beendet das Roleplay für einen der beiden Server")
-        .addSubcommand(s => s.setName("start1").setDescription("Startet Roleplay auf Server 1"))
-        .addSubcommand(s => s.setName("start2").setDescription("Startet Roleplay auf Server 2"))
+        .addSubcommand(s => s.setName("start1").setDescription("Startet Roleplay auf Server 1")
+            .addRoleOption(o => o.setName("pingrolle").setDescription("Rolle, die beim Start gepingt wird").setRequired(true)))
+        .addSubcommand(s => s.setName("start2").setDescription("Startet Roleplay auf Server 2")
+            .addRoleOption(o => o.setName("pingrolle").setDescription("Rolle, die beim Start gepingt wird").setRequired(true)))
         .addSubcommand(s => s.setName("stop").setDescription("Beendet Roleplay auf Server 1 oder 2")
             .addStringOption(o => o.setName("server").setDescription("Welcher Server soll beendet werden?").setRequired(true)
-                .addChoices({ name: "Server 1", value: "1" }, { name: "Server 2", value: "2" }))),
+                .addChoices({ name: "Server 1", value: "1" }, { name: "Server 2", value: "2" }))
+            .addRoleOption(o => o.setName("pingrolle").setDescription("Rolle, die beim Beenden gepingt wird").setRequired(true))),
     new SlashCommandBuilder()
         .setName("servercode").setDescription("Speichert und zeigt die Servercodes für beide Server")
         .addStringOption(o => o.setName("server1").setDescription("Servercode für Server 1").setRequired(true))
@@ -161,7 +184,7 @@ client.on("interactionCreate", async interaction => {
                     "🩸 **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 RP** | *Die Stadt wartet auf dich.*"
                 )
                 .setTimestamp();
-            return interaction.editReply({ content: "✅ Beide Servercodes wurden gespeichert.", embeds: [embed] });
+            return interaction.editReply({ content: "", embeds: [embed] });
         }
 
         if (interaction.commandName === "rp") {
@@ -173,8 +196,13 @@ client.on("interactionCreate", async interaction => {
             else { server = interaction.options.getString("server", true); started = false; }
             const code = getServerCode(interaction.guild.id, server);
             if (!code) return interaction.editReply({ content: `❌ Für **Server ${server}** wurde noch kein Servercode gespeichert. Nutze zuerst **/servercode**.` });
-            await interaction.channel.send({ embeds: [createRPEmbed(server, code, started)] });
-            return interaction.editReply({ content: started ? `✅ Roleplay auf Server ${server} wurde gestartet.` : `🔴 Roleplay auf Server ${server} wurde beendet.` });
+            const pingRole = interaction.options.getRole("pingrolle", true);
+            await interaction.channel.send({
+                content: `${pingRole}`,
+                embeds: [createRPEmbed(server, code, started)],
+                allowedMentions: { roles: [pingRole.id] }
+            });
+            return interaction.editReply({ content: "✅ Die Roleplay-Nachricht wurde veröffentlicht." });
         }
 
         if (interaction.commandName === "bestanden") {
@@ -204,8 +232,14 @@ client.on("interactionCreate", async interaction => {
             await updateNametag(target);
 
             const levelNames = requiredRoles.map(id => interaction.guild.roles.cache.get(id)?.name).filter(Boolean);
-            const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle("✅ BESTANDEN")
-                .setDescription(`**👤 Teammitglied**\n> ${target}\n\n**🎖️ Neue Rolle**\n> ${selectedRole.name}\n\n**🛡️ Nebenrollen**\n> ${levelNames.length ? levelNames.join(", ") : "Keine"}\n\n**📝 Grund**\n> ${reason}\n\n**👮 Ausgeführt von**\n> ${executor}`)
+            const embed = new EmbedBuilder().setColor(0x2ecc71)
+                .setDescription(`**© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋**\n╔════════════════════════════════════╗\n║ ✅ **BESTANDEN** ║\n║ © 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 ║\n╚════════════════════════════════════╝\n\n` +
+                    `👤 **Teammitglied**\n> ${target}\n\n` +
+                    `🎖️ **Neue Rolle**\n> ${selectedRole.name}\n\n` +
+                    `🛡️ **Nebenrolle**\n> ${levelNames.length ? levelNames.join(", ") : "Keine"}\n\n` +
+                    `📝 **Grund**\n> ${reason}\n\n` +
+                    `👮 **Ausgeführt von**\n> ${executor}\n\n` +
+                    `╔════════════════════════════════════╗\n║ **© 𝙉𝙞𝙚𝙙𝙚𝙧𝙨𝙖𝙘𝙝𝙨𝙚𝙣 𝙍𝙋 • 𝑻𝒆𝒂𝒎** ║\n╚════════════════════════════════════╝`)
                 .setTimestamp();
             return interaction.editReply({ embeds: [embed] });
         }
